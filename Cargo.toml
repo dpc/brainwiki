@@ -4,6 +4,7 @@ name = "brainwiki"
 version = "0.1.0"
 [dependencies]
 actix-web = "*"
+failure = "*"
 lazy_static = "*"
 pulldown-cmark = "*"
 regex = "*"

@@ -2,29 +2,19 @@
 
 #[macro_use]
 extern crate lazy_static;
+extern crate actix_web;
 extern crate pulldown_cmark;
 extern crate regex;
-extern crate actix_web;
-
-use std::collections::{HashMap, HashSet};
+#[macro_use]
+extern crate structopt;
+#[macro_use]
+extern crate failure;
 
 use std::path::PathBuf;
 mod markdown;
 mod web;
-
-type PageId = u32;
-
-struct Page {
-    rendered: String,
-    path: PathBuf,
-}
-
-struct State {
-    pages_by_id: HashMap<PageId, Page>,
-    tag_sets: HashMap<String, HashSet<PageId>>,
-
-}
-
+mod opts;
+mod fs;
 
 // GET /a/b/c - search for a post with a/b/c tag
 //   a is most important, c least important
@@ -43,8 +33,8 @@ struct State {
 // ANY /~... other special stuff
 
 fn main() {
+    let opt = opts::from_args();
     markdown::parse_markdown(&"");
 
     web::start();
-
 }

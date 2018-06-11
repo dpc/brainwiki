@@ -26,16 +26,13 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml) {
 
                 Event::Text(text)
             }
-            Event::Start(::pulldown_cmark::Tag::Code) |
-            Event::Start(::pulldown_cmark::Tag::CodeBlock(_)) 
-                => {
+            Event::Start(::pulldown_cmark::Tag::Code)
+            | Event::Start(::pulldown_cmark::Tag::CodeBlock(_)) => {
                 code_tag_level += 1;
                 event
             }
-            Event::End(::pulldown_cmark::Tag::Code) |
-
-            Event::End(::pulldown_cmark::Tag::CodeBlock(_)) 
-                => {
+            Event::End(::pulldown_cmark::Tag::Code)
+            | Event::End(::pulldown_cmark::Tag::CodeBlock(_)) => {
                 assert!(code_tag_level >= 0);
                 code_tag_level -= 1;
                 event
