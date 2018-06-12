@@ -14,7 +14,7 @@ use std::path::PathBuf;
 mod markdown;
 mod web;
 mod opts;
-mod fs;
+mod data;
 
 // GET /a/b/c - search for a post with a/b/c tag
 //   a is most important, c least important
@@ -33,8 +33,10 @@ mod fs;
 // ANY /~... other special stuff
 
 fn main() {
-    let opt = opts::from_args();
+    let opts = opts::from_args();
     markdown::parse_markdown(&"");
 
-    web::start();
+    let data = data::State::insert_from_dir(&opts.data_dir).unwrap();
+
+    web::start(data, opts);
 }

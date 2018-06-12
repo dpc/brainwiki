@@ -8,21 +8,56 @@ use std::path::{Path, PathBuf};
 type Result<T> = std::result::Result<T, failure::Error>;
 type PageId = u32;
 
-struct Page {
-    rendered: String,
+pub struct Page {
+    pub rendered: String,
     path: PathBuf,
 }
 
 #[derive(Default)]
 pub struct State {
-    pages_by_id: HashMap<PageId, Page>,
+    pub pages_by_id: HashMap<PageId, Page>,
     tag_sets: HashMap<String, HashSet<PageId>>,
     next_page_id: PageId,
     all_pages: HashSet<PageId>,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct Match {
+    pub type_: MatchType,
+    used_tags: Vec<String>,
+    skipped_tags: Vec<String>,
+}
+
+impl Match {
+    fn is_none(&self) -> bool {
+        self.type_ == MatchType::None
+    }
+
+    fn is_one(&self) -> bool {
+        if let MatchType::One(_) = self.type_ {
+            true
+        } else {
+            false
+        }
+    }
+    fn is_many(&self) -> bool {
+        if let MatchType::Many(_) = self.type_ {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum MatchType {
+    None,
+    One(PageId),
+    Many(Vec<PageId>),
+}
+
 impl State {
-    fn insert_from_dir(dir_path: &Path) -> Result<State> {
+    pub fn insert_from_dir(dir_path: &Path) -> Result<State> {
         let mut state: State = Default::default();
         for entry in fs::read_dir(dir_path)? {
             let entry = entry?;
@@ -35,7 +70,7 @@ impl State {
         Ok(state)
     }
 
-    fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
+    pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
         let md = fs::read_to_string(md_path)?;
         let (tags, rendered) = ::markdown::parse_markdown(&md);
 
@@ -64,11 +99,12 @@ impl State {
         page_id
     }
 
-    fn find_best_match(&self, mut tags: Vec<String>) -> BestMatch {
+    pub fn find_best_match(&self, mut tags: Vec<String>) -> Match {
         let mut matches: Option<HashSet<PageId>> = None;
         let mut used_tags = vec![];
+        let mut skipped_tags = vec![];
 
-        for (i, tag) in tags.iter().cloned().enumerate() {
+        for (i, tag) in tags.into_iter().enumerate() {
             if let Some(set) = self.tag_sets.get(&tag) {
                 let new_matches: HashSet<PageId> = matches
                     .as_ref()
@@ -80,18 +116,19 @@ impl State {
 
                 match new_matches.len() {
                     0 => {
-                        break;
+                        skipped_tags.push(tag);
                     }
                     1 => {
                         used_tags.push(tag);
                         matches = Some(new_matches);
-                        break;
                     }
                     _ => {
                         used_tags.push(tag);
                         matches = Some(new_matches);
                     }
                 }
+            } else {
+                skipped_tags.push(tag);
             }
         }
 
@@ -103,45 +140,26 @@ impl State {
             .cloned()
             .collect();
 
-        match matches.len() {
-            0 => BestMatch::NotFound,
-            1 => {
-                let page_id = matches.into_iter().next().unwrap();
-                BestMatch::Found {
-                    page_id: page_id,
-                    skipped_tags: tags[used_tags.len()..].to_vec(),
-                    used_tags: used_tags,
+        Match {
+            skipped_tags: skipped_tags,
+            used_tags: used_tags,
+            type_: match matches.len() {
+                0 => MatchType::None,
+                1 => {
+                    let page_id = matches.into_iter().next().unwrap();
+                    MatchType::One(page_id)
                 }
-            }
-            _ => BestMatch::Ambigous {
-                page_ids: matches,
-                skipped_tags: tags[used_tags.len()..].to_vec(),
-                used_tags: used_tags,
+                _ => MatchType::Many(matches),
             },
         }
     }
-}
-
-#[derive(Debug, PartialEq, Eq)]
-enum BestMatch {
-    NotFound,
-    Found {
-        page_id: PageId,
-        used_tags: Vec<String>,
-        skipped_tags: Vec<String>,
-    },
-    Ambigous {
-        page_ids: Vec<PageId>,
-        used_tags: Vec<String>,
-        skipped_tags: Vec<String>,
-    },
 }
 
 #[test]
 fn simple() {
     let mut state: State = Default::default();
 
-    assert_eq!(state.find_best_match(vec![]), BestMatch::NotFound,);
+    assert!(state.find_best_match(vec![]).is_none());
 
     let p1 = state.insert(
         Page {
@@ -159,104 +177,45 @@ fn simple() {
         vec!["a".into(), "c".into()],
     );
 
-    let empty : Vec<String> = vec![];
+    let empty: Vec<String> = vec![];
     let m = state.find_best_match(empty.clone());
-    if let BestMatch::Ambigous {
-        page_ids,
-        used_tags,
-        skipped_tags
-    } = m {
-        assert_eq!(page_ids.len(), 2);
-        assert_eq!(used_tags, empty);
-        assert_eq!(skipped_tags, empty);
-    } else {
-        panic!(m);
-    }
-
+    assert!(m.is_many());
+    assert_eq!(m.used_tags, empty);
+    assert_eq!(m.skipped_tags, empty);
 
     let tags = vec!["x".into()];
     let m = state.find_best_match(tags.clone());
-    if let BestMatch::Ambigous {
-        page_ids,
-        used_tags,
-        skipped_tags
-    } = m {
-        assert_eq!(page_ids.len(), 2);
-        assert_eq!(used_tags, empty);
-        assert_eq!(skipped_tags, tags);
-    } else {
-        panic!(m);
-    }
-
+    assert!(m.is_many());
+    assert_eq!(m.used_tags, empty);
+    assert_eq!(m.skipped_tags, tags);
 
     let tags = vec!["a".into()];
     let m = state.find_best_match(tags.clone());
-    if let BestMatch::Ambigous {
-        page_ids,
-        used_tags,
-        skipped_tags
-    } = m {
-        assert_eq!(page_ids.len(), 2);
-        assert_eq!(used_tags, tags);
-        assert_eq!(skipped_tags, empty);
-    } else {
-        panic!(m);
-    }
-
+    assert!(m.is_many());
+    assert_eq!(m.used_tags, tags);
+    assert_eq!(m.skipped_tags, empty);
 
     let tags = vec!["a".into(), "x".into()];
     let m = state.find_best_match(tags.clone());
-    if let BestMatch::Ambigous {
-        page_ids,
-        used_tags,
-        skipped_tags
-    } = m {
-        assert_eq!(page_ids.len(), 2);
-        assert_eq!(used_tags, vec!["a".to_string()]);
-        assert_eq!(skipped_tags, vec!["x".to_string()]);
-    } else {
-        panic!(m);
-    }
-
+    assert!(m.is_many());
+    assert_eq!(m.used_tags, vec!["a".to_string()]);
+    assert_eq!(m.skipped_tags, vec!["x".to_string()]);
 
     let tags = vec!["a".into(), "b".into()];
     let m = state.find_best_match(tags.clone());
-    if let BestMatch::Found {
-        page_id,
-        used_tags,
-        skipped_tags
-    } = m {
-        assert_eq!(used_tags, vec!["a".to_string(), "b".into()]);
-        assert_eq!(skipped_tags, empty);
-    } else {
-        panic!(m);
-    }
-
+    assert!(m.is_one());
+    assert_eq!(m.used_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(m.skipped_tags, empty);
 
     let tags = vec!["a".into(), "b".into()];
     let m = state.find_best_match(tags.clone());
-    if let BestMatch::Found {
-        page_id,
-        used_tags,
-        skipped_tags
-    } = m {
-        assert_eq!(used_tags, vec!["a".to_string(), "b".into()]);
-        assert_eq!(skipped_tags, empty);
-    } else {
-        panic!(m);
-    }
-
+    assert!(m.is_one());
+    assert_eq!(m.used_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(m.skipped_tags, empty);
 
     let tags = vec!["a".to_string(), "x".into(), "b".into()];
     let m = state.find_best_match(tags.clone());
-    if let BestMatch::Found {
-        page_id,
-        used_tags,
-        skipped_tags
-    } = m {
-        assert_eq!(used_tags, vec!["a".to_string(), "b".into()]);
-        assert_eq!(skipped_tags, vec!["x".to_string]);
-    } else {
-        panic!(m);
-    }
+    assert!(m.is_one());
+    assert_eq!(m.used_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(m.skipped_tags, vec!["x".to_string()]);
 }
