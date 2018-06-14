@@ -14,6 +14,37 @@ pub struct Data {
     pub title: String,
 }
 
+pub fn navbar(data: &Data) -> impl Render {
+    (nav.id("main-navbar").class(
+        "navbar navbar-expand-sm navbar-dark bg-primary fixed-top",
+    )((div.class("container")((
+        a.class("navbar-brand").href("/")("Hacker Audit"),
+        button
+            .class("navbar-toggler")
+            .attr("type", "button")
+            .data_toggle("collapse")
+            .data_target("#navbar-collapse")
+            .aria_controls("navbar-collapse")
+            .aria_expanded("false")
+            .aria_label("Toggle navigation")(span.class("navbar-toggler-icon")),
+        div.id("navbar-collapse")
+            .class("collapse navbar-collapse show")((
+            ul.class("navbar-nav")((li.class("nav-item dropdown")((
+                a.id("dropdown-top")
+                    .class("nav-link dropdown-toggle mr-auto")
+                    .href("/")
+                    .data_toggle("dropdown")
+                    .aria_haspopup("true")
+                    .aria_expanded("false")("Top"),
+                div.class("dropdown-menu").aria_labelledby("dropdown01")((
+                    a.class("dropdown-item").href("/")("Home"),
+                )),
+            )),)),
+            //session_menu(data),
+        )),
+    )),)),)
+}
+
 
 pub fn my_footer() -> impl Render {
     footer.id("footer").class("container py-1 my-1")((row(
@@ -53,6 +84,7 @@ pub fn base_with_js(
             )),
             body(wrapper.class("d-flex flex-column")((
                 flash_body,
+                navbar(data),
                 main
                     .id("main")
                     .role("main")
