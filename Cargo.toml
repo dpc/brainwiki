@@ -2,6 +2,16 @@
 authors = ["Dawid Ciężarkiewicz <dpc@dpc.pw>"]
 name = "brainwiki"
 version = "0.1.0"
+
+[[bin]]
+name = "brainwiki"
+path = "src/main.rs"
+
+[[bin]]
+name = "template"
+path = "src/main_template.rs"
+
+
 [dependencies]
 actix-web = "*"
 failure = "*"
@@ -9,3 +19,7 @@ lazy_static = "*"
 pulldown-cmark = "*"
 regex = "*"
 structopt = "*"
+stpl = { git = "http://github.com/dpc/stpl" }
+serde = "*"
+serde_derive = "*"
+serde_json = "*"

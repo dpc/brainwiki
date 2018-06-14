@@ -8,6 +8,8 @@ use std::sync;
 use opts::Opts;
 use {data::{self, Match, MatchType}};
 
+use tpl;
+
 fn index(_: String) -> impl Responder {
     format!("Hello world")
 }
@@ -24,7 +26,13 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
 
         MatchType::One( page_id) => {
             let html = data.pages_by_id.get(&page_id).unwrap().rendered.clone();
-            Ok(HttpResponse::Ok().body(html))
+            let body = tpl::render(&tpl::view_tpl(), &tpl::view::Data {
+                base: tpl::base::Data {
+                    title: "TITLE_TBD".into(),
+                },
+                page_rendered: html,
+            });
+            Ok(HttpResponse::Ok().body(body))
         }
         MatchType::Many(page_ids) => {
             Ok(HttpResponse::Ok().body(format!("Results: {}", page_ids.len())))

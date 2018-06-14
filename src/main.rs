@@ -9,12 +9,19 @@ extern crate regex;
 extern crate structopt;
 #[macro_use]
 extern crate failure;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+#[macro_use]
+extern crate stpl;
 
 use std::path::PathBuf;
 mod markdown;
 mod web;
 mod opts;
 mod data;
+mod tpl;
 
 // GET /a/b/c - search for a post with a/b/c tag
 //   a is most important, c least important

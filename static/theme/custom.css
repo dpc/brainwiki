@@ -1,0 +1,80 @@
+body {
+  padding-top: 3.5rem;
+  font-size: 18px;
+}
+
+.icon {
+    width: 1em;
+    margin: 0px;
+    margin-left: 0.2em;
+    margin-right: 0.2em;
+    align-self: center;
+}
+
+.mini-icon {
+    width: 0.8em;
+    margin: 0px;
+    padding-bottom: 0.2em;
+    align-self: center;
+}
+
+.icon-white path {
+  fill: #fff !important;
+}
+
+.replaced-svg {
+  bottom: -0.125em;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+#session-menu {
+  margin-left: 0.2em;
+  margin-right: 0.2em;
+}
+
+#search-navigation li.fixed-size{
+  width: 3em;
+  text-align: center;
+}
+
+.text-align-center {
+  text-align: center;
+}
+
+#main-navbar {
+  padding: 0;
+}
+
+#flash {
+  position: fixed;
+  top: 2.7em;
+  left: 30%;
+  right: 30%;
+  z-index: 9999;
+}
+
+.nomargin {
+  margin: 0;
+}
+
+blockquote > p.card-text {
+  border-left: 0.1em solid #ccc;
+  padding-left: 0.5em;
+}
+
+#footer {
+  margin-top:50px;
+  padding-top:20px;
+  padding-bottom:20px;
+  background-color: #ecf0f1;
+  border-radius: 0.25rem;
+}
+
+body, wrapper {
+   min-height:100vh;
+}
+
+main {
+    flex:1;
+}

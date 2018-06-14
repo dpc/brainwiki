@@ -4,6 +4,7 @@ use std::collections::{hash_map::Entry,
                        {HashMap, HashSet}};
 use std::fs;
 use std::path::{Path, PathBuf};
+use markdown;
 
 type Result<T> = std::result::Result<T, failure::Error>;
 type PageId = u32;
@@ -72,7 +73,7 @@ impl State {
 
     pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
         let md = fs::read_to_string(md_path)?;
-        let (tags, rendered) = ::markdown::parse_markdown(&md);
+        let (tags, rendered) = markdown::parse_markdown(&md);
 
         let page_id = self.next_page_id;
 
