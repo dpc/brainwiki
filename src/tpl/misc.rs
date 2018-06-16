@@ -1,5 +1,4 @@
 use super::base::Data;
-use super::data::*;
 use std::env;
 use stpl::html::*;
 use stpl::Render;
@@ -97,7 +96,7 @@ pub fn narrowing_tags_row(cur_url: &str, narrowing_tags: &::data::NarrowingTagsS
                 .iter()
                 .map(|(tag, nums)| {
                     (
-                        a.href(format!("{}/{}/", cur_url, tag))(format!("#{} ({})", tag, nums)),
+                        a.href(url_append(cur_url, tag))(format!("#{} ({})", tag, nums)),
                         nbsp,
                     )
                 })
@@ -105,6 +104,14 @@ pub fn narrowing_tags_row(cur_url: &str, narrowing_tags: &::data::NarrowingTagsS
         ))))
     } else {
         None
+    }
+}
+
+fn url_append(base: &str, tag: &str) -> String {
+    if base.as_bytes().last().cloned() == Some('/' as u8) {
+        format!("{}{}/", base, tag)
+    } else {
+        format!("{}/{}", base, tag)
     }
 }
 

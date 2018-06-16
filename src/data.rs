@@ -16,13 +16,22 @@ pub type NarrowingTagsSet = HashMap<String, usize>;
 pub struct Page {
     pub title: String,
     pub rendered: String,
-    path: PathBuf,
-    tags: Vec<String>,
+    fs_path: PathBuf,
+    pub tags: Vec<String>,
 }
 
 impl Page {
     pub fn url(&self) -> String {
         "/".to_string() + self.tags.join("/").as_str()
+    }
+
+    pub fn to_full_url(&self, prefer_exact: bool) -> String {
+        let mut location = String::from("/") + self.tags.join("/").as_str();
+        if !prefer_exact {
+            location += "/";
+        }
+
+        location
     }
 }
 
@@ -47,7 +56,7 @@ impl Match {
         self.type_ == MatchType::None
     }
 
-    fn is_one(&self) -> bool {
+    pub fn is_one(&self) -> bool {
         if let MatchType::One(_) = self.type_ {
             true
         } else {
@@ -60,6 +69,19 @@ impl Match {
         } else {
             false
         }
+    }
+
+    pub fn has_unmatched_tags(&self) -> bool {
+        !self.unmatched_tags.is_empty()
+    }
+
+    pub fn to_precise_url(&self, prefer_exact: bool) -> String {
+        let mut location = String::from("/") + self.matching_tags.join("/").as_str();
+        if !prefer_exact {
+            location += "/";
+        }
+
+        location
     }
 }
 
@@ -91,7 +113,7 @@ impl State {
         let page_id = self.next_page_id;
 
         let page = Page {
-            path: md_path.into(),
+            fs_path: md_path.into(),
             rendered: rendered,
             title: if title.is_empty() {
                 tags.join("/")
@@ -124,8 +146,6 @@ impl State {
         let mut matches: Option<HashSet<PageId>> = None;
         let mut matching_tags = vec![];
         let mut unmatched_tags = vec![];
-
-        println!("{:?}", tags);
 
         for (i, tag) in tags.iter().cloned().enumerate() {
             if let Some(set) = self.tag_sets.get(&tag) {

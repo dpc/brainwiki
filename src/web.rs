@@ -19,6 +19,11 @@ fn login(_: String) -> impl Responder {
     format!("Login - not implemented yet")
 }
 
+fn redirect_to(location: &str) -> HttpResponse {
+    HttpResponse::TemporaryRedirect()
+        .header("Location", location)
+        .finish()
+}
 fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
     let cur_url = req.path();
     let mut tags: Vec<String> = cur_url.split("/").skip(1).map(Into::into).collect();
@@ -31,21 +36,19 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
         true
     };
 
-    let match_ = data.find_best_match(tags, prefer_exact);
+    let match_ = data.find_best_match(tags.clone(), prefer_exact);
 
-    if !match_.unmatched_tags.is_empty() {
-        let mut location = String::from("/") + match_.matching_tags.join("/").as_str();
-        if !prefer_exact {
-            location += "/";
-        }
-        return Ok(HttpResponse::TemporaryRedirect()
-            .header("Location", location)
-            .finish());
+    if match_.has_unmatched_tags() {
+        return Ok(redirect_to(match_.to_precise_url(prefer_exact).as_str()));
     }
 
     match match_.type_ {
         MatchType::One(page_id) => {
-            let html = data.pages_by_id.get(&page_id).unwrap().rendered.clone();
+            let page = data.pages_by_id.get(&page_id).unwrap();
+            if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
+                return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
+            }
+            let html = page.rendered.clone();
             let body = tpl::render(
                 &tpl::view_tpl(),
                 &tpl::view::Data {

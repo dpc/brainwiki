@@ -1,17 +1,4 @@
-/*pub mod home;
 pub mod base;
-pub mod unauthorized;
-pub mod user;
-pub mod search;
-pub mod top;
-pub mod security;
-pub mod pkg;
-pub mod pkgver;
-pub mod review;
-pub mod stats;
-pub mod register;*/
-pub mod base;
-pub mod data;
 pub mod index;
 pub mod misc;
 pub mod view;
@@ -25,9 +12,6 @@ use stpl::html;
 use stpl::{Template, TemplateExt};
 
 macro_rules! def_tpl {
-    // This macro takes an argument of designator `ident` and
-    // creates a function named `$func_name`.
-    // The `ident` designator is used for variable/function names.
     ($name:ident, $key:ident) => {
         pub fn $name() -> impl Template<Argument = ::tpl::$key::Data> {
             html::Template::new(stringify!($key), ::tpl::$key::page)
