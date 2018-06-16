@@ -1,10 +1,12 @@
 use failure;
+use markdown;
 use std;
-use std::collections::{hash_map::Entry,
-                       {HashMap, HashSet}};
+use std::collections::{
+    hash_map::Entry,
+    {HashMap, HashSet},
+};
 use std::fs;
 use std::path::{Path, PathBuf};
-use markdown;
 
 type Result<T> = std::result::Result<T, failure::Error>;
 type PageId = u32;
@@ -31,7 +33,6 @@ pub struct State {
     next_page_id: PageId,
     all_pages: HashSet<PageId>,
 }
-
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Match {
@@ -96,8 +97,7 @@ impl State {
                 tags.join("/")
             } else {
                 title
-            }
-                ,
+            },
             tags: tags,
         };
 
@@ -173,7 +173,6 @@ impl State {
             }
         }
 
-
         Match {
             unmatched_tags: unmatched_tags,
             matching_tags: matching_tags,
@@ -186,21 +185,26 @@ impl State {
                 }
                 _ => {
                     if prefer_exact {
-                        let id = matches.iter().find(|id| {
-                            self.pages_by_id.get(&id).unwrap().tags.iter().all(|tag| {
-                                tags.contains(&tag)
+                        let id = matches
+                            .iter()
+                            .find(|id| {
+                                self.pages_by_id
+                                    .get(&id)
+                                    .unwrap()
+                                    .tags
+                                    .iter()
+                                    .all(|tag| tags.contains(&tag))
                             })
-                        }).cloned();
+                            .cloned();
                         if let Some(id) = id {
                             MatchType::One(id)
                         } else {
                             MatchType::Many(matches)
                         }
-
                     } else {
                         MatchType::Many(matches)
                     }
-                },
+                }
             },
         }
     }
@@ -212,22 +216,17 @@ fn simple() {
 
     assert!(state.find_best_match(vec![]).is_none());
 
-    let p1 = state.insert(
-        Page {
-            rendered: "".into(),
-            path: "".into(),
-            tags: 
-        vec!["a".into(), "b".into()],
-        },
-    );
+    let p1 = state.insert(Page {
+        rendered: "".into(),
+        path: "".into(),
+        tags: vec!["a".into(), "b".into()],
+    });
 
-    let p2 = state.insert(
-        Page {
-            rendered: "".into(),
-            path: "".into(),
+    let p2 = state.insert(Page {
+        rendered: "".into(),
+        path: "".into(),
         tags: vec!["a".into(), "c".into()],
-        },
-    );
+    });
 
     let empty: Vec<String> = vec![];
     let m = state.find_best_match(empty.clone());

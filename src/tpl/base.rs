@@ -1,7 +1,7 @@
 use super::misc;
 use super::misc::*;
-use stpl::Render;
 use stpl::html::*;
+use stpl::Render;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Flash {
@@ -36,23 +36,24 @@ pub fn navbar(data: &Data) -> impl Render {
                     .data_toggle("dropdown")
                     .aria_haspopup("true")
                     .aria_expanded("false")("Top"),
-                div.class("dropdown-menu").aria_labelledby("dropdown01")((
-                    a.class("dropdown-item").href("/")("Home"),
-                )),
+                div.class("dropdown-menu").aria_labelledby("dropdown01")((a
+                    .class("dropdown-item")
+                    .href("/")(
+                    "Home"
+                ),)),
             )),)),
             //session_menu(data),
         )),
     )),)),)
 }
 
-
 pub fn my_footer() -> impl Render {
-    footer.id("footer").class("container py-1 my-1")((row(
-        div.class("col text-center mx-1 px-4")(span((
+    footer.id("footer").class("container py-1 my-1")((row(div.class("col text-center mx-1 px-4")(
+        span((
             "© 2017-2018 Copyright: ",
             a.href(misc::url_base())("Hacker Audit"),
-        ))),
-    ),))
+        )),
+    )),))
 }
 
 pub fn base(data: &Data, content: Box<Render + 'static>) -> impl Render {

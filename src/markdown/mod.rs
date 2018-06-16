@@ -33,8 +33,8 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml, Title) {
 
                 Event::Text(text)
             }
-             Event::Start(::pulldown_cmark::Tag::Code)
-            |  Event::Start(::pulldown_cmark::Tag::CodeBlock(_)) => {
+            Event::Start(::pulldown_cmark::Tag::Code)
+            | Event::Start(::pulldown_cmark::Tag::CodeBlock(_)) => {
                 code_tag_level += 1;
                 event
             }
@@ -45,7 +45,7 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml, Title) {
                 event
             }
             Event::Start(::pulldown_cmark::Tag::Header(1)) => {
-                if title.is_empty()  {
+                if title.is_empty() {
                     in_title += 1;
                 }
                 event

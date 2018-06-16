@@ -18,11 +18,11 @@ extern crate serde_json;
 extern crate stpl;
 
 use std::path::PathBuf;
-mod markdown;
-mod web;
-mod opts;
 mod data;
+mod markdown;
+mod opts;
 mod tpl;
+mod web;
 
 // GET /a/b/c - search for a post with a/b/c tag
 //   a is most important, c least important
