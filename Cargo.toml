@@ -7,11 +7,6 @@ version = "0.1.0"
 name = "brainwiki"
 path = "src/main.rs"
 
-[[bin]]
-name = "template"
-path = "src/main_template.rs"
-
-
 [dependencies]
 actix-web = "*"
 failure = "*"

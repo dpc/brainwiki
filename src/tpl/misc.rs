@@ -1,8 +1,8 @@
 use super::base::Data;
 use super::data::*;
 use std::env;
-use stpl::Render;
 use stpl::html::*;
+use stpl::Render;
 
 pub fn flash(data: &Data) -> (impl Render, impl Render) {
     (
@@ -89,6 +89,24 @@ pub fn url_base() -> String {
     env::var("BASE_URL").unwrap_or_else(|_| "/".into())
 }
 
+pub fn narrowing_tags_row(cur_url: &str, narrowing_tags: &::data::NarrowingTagsSet) -> impl Render {
+    if !narrowing_tags.is_empty() {
+        Some(row(col((
+            h2("Narrow search"),
+            p(narrowing_tags
+                .iter()
+                .map(|(tag, nums)| {
+                    (
+                        a.href(format!("{}/{}/", cur_url, tag))(format!("#{} ({})", tag, nums)),
+                        nbsp,
+                    )
+                })
+                .collect::<Vec<_>>()),
+        ))))
+    } else {
+        None
+    }
+}
 
 pub fn col<C: Render + 'static>(content: C) -> impl Render {
     div.class("col-sm mx-1 px-4")(content)

@@ -8,10 +8,20 @@ use markdown;
 
 type Result<T> = std::result::Result<T, failure::Error>;
 type PageId = u32;
+pub type NarrowingTagsSet = HashMap<String, usize>;
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Page {
+    pub title: String,
     pub rendered: String,
     path: PathBuf,
+    tags: Vec<String>,
+}
+
+impl Page {
+    pub fn url(&self) -> String {
+        "/".to_string() + self.tags.join("/").as_str()
+    }
 }
 
 #[derive(Default)]
@@ -22,11 +32,13 @@ pub struct State {
     all_pages: HashSet<PageId>,
 }
 
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Match {
     pub type_: MatchType,
-    used_tags: Vec<String>,
-    skipped_tags: Vec<String>,
+    pub matching_tags: Vec<String>,
+    pub unmatched_tags: Vec<String>,
+    pub narrowing_tags: NarrowingTagsSet,
 }
 
 impl Match {
@@ -73,26 +85,34 @@ impl State {
 
     pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
         let md = fs::read_to_string(md_path)?;
-        let (tags, rendered) = markdown::parse_markdown(&md);
+        let (tags, rendered, title) = markdown::parse_markdown(&md);
 
         let page_id = self.next_page_id;
 
         let page = Page {
             path: md_path.into(),
             rendered: rendered,
+            title: if title.is_empty() {
+                tags.join("/")
+            } else {
+                title
+            }
+                ,
+            tags: tags,
         };
 
-        self.insert(page, tags);
+        self.insert(page);
         Ok(())
     }
 
-    fn insert(&mut self, page: Page, tags: Vec<String>) -> PageId {
+    fn insert(&mut self, mut page: Page) -> PageId {
         let page_id = self.next_page_id;
         self.next_page_id += 1;
         self.all_pages.insert(page_id);
-        for tag in tags.into_iter() {
+
+        for tag in page.tags.iter() {
             self.tag_sets
-                .entry(tag)
+                .entry(tag.clone())
                 .or_insert(Default::default())
                 .insert(page_id);
         }
@@ -100,12 +120,14 @@ impl State {
         page_id
     }
 
-    pub fn find_best_match(&self, mut tags: Vec<String>) -> Match {
+    pub fn find_best_match(&self, mut tags: Vec<String>, prefer_exact: bool) -> Match {
         let mut matches: Option<HashSet<PageId>> = None;
-        let mut used_tags = vec![];
-        let mut skipped_tags = vec![];
+        let mut matching_tags = vec![];
+        let mut unmatched_tags = vec![];
 
-        for (i, tag) in tags.into_iter().enumerate() {
+        println!("{:?}", tags);
+
+        for (i, tag) in tags.iter().cloned().enumerate() {
             if let Some(set) = self.tag_sets.get(&tag) {
                 let new_matches: HashSet<PageId> = matches
                     .as_ref()
@@ -117,19 +139,19 @@ impl State {
 
                 match new_matches.len() {
                     0 => {
-                        skipped_tags.push(tag);
+                        unmatched_tags.push(tag);
                     }
                     1 => {
-                        used_tags.push(tag);
+                        matching_tags.push(tag);
                         matches = Some(new_matches);
                     }
                     _ => {
-                        used_tags.push(tag);
+                        matching_tags.push(tag);
                         matches = Some(new_matches);
                     }
                 }
             } else {
-                skipped_tags.push(tag);
+                unmatched_tags.push(tag);
             }
         }
 
@@ -137,20 +159,48 @@ impl State {
             .as_ref()
             .unwrap_or(&self.all_pages)
             .iter()
-            .take(10)
+            .take(1000)
             .cloned()
             .collect();
 
+        let mut narrowing_tags = HashMap::new();
+
+        for page_id in &matches {
+            for tag in &self.pages_by_id.get(&page_id).unwrap().tags {
+                if !matching_tags.contains(&tag) {
+                    *narrowing_tags.entry(tag.clone()).or_insert(0) += 1;
+                }
+            }
+        }
+
+
         Match {
-            skipped_tags: skipped_tags,
-            used_tags: used_tags,
+            unmatched_tags: unmatched_tags,
+            matching_tags: matching_tags,
+            narrowing_tags,
             type_: match matches.len() {
                 0 => MatchType::None,
                 1 => {
                     let page_id = matches.into_iter().next().unwrap();
                     MatchType::One(page_id)
                 }
-                _ => MatchType::Many(matches),
+                _ => {
+                    if prefer_exact {
+                        let id = matches.iter().find(|id| {
+                            self.pages_by_id.get(&id).unwrap().tags.iter().all(|tag| {
+                                tags.contains(&tag)
+                            })
+                        }).cloned();
+                        if let Some(id) = id {
+                            MatchType::One(id)
+                        } else {
+                            MatchType::Many(matches)
+                        }
+
+                    } else {
+                        MatchType::Many(matches)
+                    }
+                },
             },
         }
     }
@@ -166,57 +216,58 @@ fn simple() {
         Page {
             rendered: "".into(),
             path: "".into(),
-        },
+            tags: 
         vec!["a".into(), "b".into()],
+        },
     );
 
     let p2 = state.insert(
         Page {
             rendered: "".into(),
             path: "".into(),
+        tags: vec!["a".into(), "c".into()],
         },
-        vec!["a".into(), "c".into()],
     );
 
     let empty: Vec<String> = vec![];
     let m = state.find_best_match(empty.clone());
     assert!(m.is_many());
-    assert_eq!(m.used_tags, empty);
-    assert_eq!(m.skipped_tags, empty);
+    assert_eq!(m.matching_tags, empty);
+    assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["x".into()];
     let m = state.find_best_match(tags.clone());
     assert!(m.is_many());
-    assert_eq!(m.used_tags, empty);
-    assert_eq!(m.skipped_tags, tags);
+    assert_eq!(m.matching_tags, empty);
+    assert_eq!(m.unmatched_tags, tags);
 
     let tags = vec!["a".into()];
     let m = state.find_best_match(tags.clone());
     assert!(m.is_many());
-    assert_eq!(m.used_tags, tags);
-    assert_eq!(m.skipped_tags, empty);
+    assert_eq!(m.matching_tags, tags);
+    assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".into(), "x".into()];
     let m = state.find_best_match(tags.clone());
     assert!(m.is_many());
-    assert_eq!(m.used_tags, vec!["a".to_string()]);
-    assert_eq!(m.skipped_tags, vec!["x".to_string()]);
+    assert_eq!(m.matching_tags, vec!["a".to_string()]);
+    assert_eq!(m.unmatched_tags, vec!["x".to_string()]);
 
     let tags = vec!["a".into(), "b".into()];
     let m = state.find_best_match(tags.clone());
     assert!(m.is_one());
-    assert_eq!(m.used_tags, vec!["a".to_string(), "b".into()]);
-    assert_eq!(m.skipped_tags, empty);
+    assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".into(), "b".into()];
     let m = state.find_best_match(tags.clone());
     assert!(m.is_one());
-    assert_eq!(m.used_tags, vec!["a".to_string(), "b".into()]);
-    assert_eq!(m.skipped_tags, empty);
+    assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".to_string(), "x".into(), "b".into()];
     let m = state.find_best_match(tags.clone());
     assert!(m.is_one());
-    assert_eq!(m.used_tags, vec!["a".to_string(), "b".into()]);
-    assert_eq!(m.skipped_tags, vec!["x".to_string()]);
+    assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(m.unmatched_tags, vec!["x".to_string()]);
 }

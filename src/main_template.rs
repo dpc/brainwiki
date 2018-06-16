@@ -14,5 +14,7 @@ mod tpl;
 
 fn main() {
     stpl::handle_dynamic()
-        .template(&tpl::view_tpl()) ;
+        .template(&tpl::view_tpl())
+        .template(&tpl::index_tpl())
+        ;
 }

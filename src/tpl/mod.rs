@@ -12,8 +12,9 @@ pub mod stats;
 pub mod register;*/
 pub mod data;
 pub mod base;
-pub mod view;
 pub mod misc;
+pub mod view;
+pub mod index;
 
 use failure::{self, Fail};
 use serde;
@@ -23,9 +24,21 @@ use stpl;
 use stpl::{Template, TemplateExt};
 use stpl::html;
 
-pub fn view_tpl() -> impl Template<Argument = ::tpl::view::Data> {
-    html::Template::new("view", ::tpl::view::page)
+macro_rules! def_tpl {
+    // This macro takes an argument of designator `ident` and
+    // creates a function named `$func_name`.
+    // The `ident` designator is used for variable/function names.
+    ($name:ident, $key:ident) => (
+
+        pub fn $name() -> impl Template<Argument = ::tpl::$key::Data> {
+            html::Template::new(stringify!($key), ::tpl::$key::page)
+        }
+    )
 }
+
+def_tpl!(view_tpl, view);
+def_tpl!(index_tpl, index);
+
 
 pub fn render<T: stpl::Template>(template: &T, data: &<T as Template>::Argument) -> Vec<u8>
 where
@@ -36,17 +49,9 @@ where
     let mut path: PathBuf = path.to_path_buf();
     path.set_file_name("template");
 
-    template.render_dynamic(&path, data).unwrap_or_else(|e| {
-        eprintln!("Rendering template {} failed: {}", template.key(), e);
-        let b = failure::Backtrace::new();
-        let stdout = e.stdout().unwrap_or_else(|| &[]);
-        let stderr = e.stderr ().unwrap_or_else(|| &[]);
-        eprintln!(
-            "stdout: {}\nstderr: {}\nbacktrace:{}\n",
-            String::from_utf8_lossy(&stdout),
-            String::from_utf8_lossy(&stderr),
-            e.backtrace().unwrap_or_else(|| &b),
-            );
-        "Internal error".into()
-    })
+    let mut out = vec![];
+
+    template.render(data, &mut out).unwrap();
+
+    out
 }

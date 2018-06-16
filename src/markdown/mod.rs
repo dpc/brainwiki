@@ -3,14 +3,17 @@ use pulldown_cmark::{html, Event, Parser};
 use regex::Regex;
 pub type Tag = String;
 pub type RenderedHtml = String;
+pub type Title = String;
 
-pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml) {
+pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml, Title) {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"#[\w\d]+").unwrap();
     }
 
     let mut tags = vec![];
     let mut html_buf = String::new();
+    let mut in_title = 0u32;
+    let mut title = String::new();
 
     let mut code_tag_level = 0;
     {
@@ -24,10 +27,14 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml) {
                     }
                 }
 
+                if in_title > 0 {
+                    title += &text.clone().to_string();
+                }
+
                 Event::Text(text)
             }
-            Event::Start(::pulldown_cmark::Tag::Code)
-            | Event::Start(::pulldown_cmark::Tag::CodeBlock(_)) => {
+             Event::Start(::pulldown_cmark::Tag::Code)
+            |  Event::Start(::pulldown_cmark::Tag::CodeBlock(_)) => {
                 code_tag_level += 1;
                 event
             }
@@ -35,6 +42,16 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml) {
             | Event::End(::pulldown_cmark::Tag::CodeBlock(_)) => {
                 assert!(code_tag_level >= 0);
                 code_tag_level -= 1;
+                event
+            }
+            Event::Start(::pulldown_cmark::Tag::Header(1)) => {
+                if title.is_empty()  {
+                    in_title += 1;
+                }
+                event
+            }
+            Event::End(::pulldown_cmark::Tag::Header(1)) => {
+                in_title -= 1;
                 event
             }
             _ => event,
@@ -46,7 +63,7 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml) {
     tags.sort();
     tags.dedup();
 
-    (tags, html_buf)
+    (tags, html_buf, title)
 }
 
 #[test]
