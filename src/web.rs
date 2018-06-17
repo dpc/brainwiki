@@ -55,7 +55,7 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
                     base: tpl::base::Data {
                         title: "TITLE_TBD".into(),
                     },
-                    page_rendered: html,
+                    page: page.clone(),
                     cur_url: cur_url.into(),
                     narrowing_tags: match_.narrowing_tags,
                 },

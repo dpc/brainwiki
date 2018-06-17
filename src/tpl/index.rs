@@ -18,15 +18,17 @@ pub struct Data {
 pub fn page(data: &Data) -> impl Render {
     let content = (
         misc::breadcrumb(vec!["TODO".into()]),
-        misc::narrowing_tags_row(&data.cur_url, &data.narrowing_tags),
-        row(col((
-            h2("Matches"),
-            ul(data
-                .pages
-                .iter()
-                .map(|page| li(a.href(page.url())(page.title.clone())))
-                .collect::<Vec<_>>()),
-        ))),
+        row((
+            misc::narrowing_tags_col(&data.cur_url, &data.narrowing_tags),
+            col((
+                h2("Pages"),
+                ul(data
+                    .pages
+                    .iter()
+                    .map(|page| li(a.href(page.url())(page.title.clone())))
+                    .collect::<Vec<_>>()),
+            )),
+        )),
     );
 
     base::base(&data.base, Box::new(content))

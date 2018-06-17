@@ -71,15 +71,7 @@ pub fn breadcrumb(mut names: Vec<BreadCrumbItem>) -> impl Render {
         (names
             .drain(..)
             .enumerate()
-            .map(|(n, render)| {
-                if n + 1 != names_len {
-                    Box::new(li.class("breadcrumb-item")(render.0)) as Box<Render>
-                } else {
-                    Box::new(li.class("breadcrumb-item active").aria_current("page")(
-                        render.0,
-                    )) as Box<Render>
-                }
-            })
+            .map(|(n, render)| Box::new(li.class("breadcrumb-item")(render.0)) as Box<Render>)
             .collect::<Vec<Box<Render>>>()),
     ))
 }
@@ -88,26 +80,32 @@ pub fn url_base() -> String {
     env::var("BASE_URL").unwrap_or_else(|_| "/".into())
 }
 
-pub fn narrowing_tags_row(cur_url: &str, narrowing_tags: &::data::NarrowingTagsSet) -> impl Render {
-    if !narrowing_tags.is_empty() {
-        Some(row(col((
-            h2("Narrow search"),
-            p(narrowing_tags
+pub fn narrowing_tags_col(cur_url: &str, narrowing_tags: &::data::NarrowingTagsSet) -> impl Render {
+    col_menu(if !narrowing_tags.is_empty() {
+        let mut list: Vec<(_, _)> = narrowing_tags.iter().collect();
+        list.sort_by(|n, m| n.0.cmp(m.0));
+        Some((
+            h2("Tags"),
+            p(list
                 .iter()
                 .map(|(tag, nums)| {
                     (
-                        a.href(url_append(cur_url, tag))(format!("#{} ({})", tag, nums)),
-                        nbsp,
+                        a.href(url_append(cur_url, tag))((
+                            format!("#{}", tag),
+                            nbsp,
+                            format!("({})", nums),
+                        )),
+                        " ",
                     )
                 })
                 .collect::<Vec<_>>()),
-        ))))
+        ))
     } else {
         None
-    }
+    })
 }
 
-fn url_append(base: &str, tag: &str) -> String {
+pub fn url_append(base: &str, tag: &str) -> String {
     if base.as_bytes().last().cloned() == Some('/' as u8) {
         format!("{}{}/", base, tag)
     } else {
@@ -116,7 +114,10 @@ fn url_append(base: &str, tag: &str) -> String {
 }
 
 pub fn col<C: Render + 'static>(content: C) -> impl Render {
-    div.class("col-sm mx-1 px-4")(content)
+    div.class("col-9 px-4")(content)
+}
+pub fn col_menu<C: Render + 'static>(content: C) -> impl Render {
+    div.class("col-3 px-4")(content)
 }
 
 pub fn row<C: Render + 'static>(content: C) -> impl Render {
