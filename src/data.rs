@@ -1,5 +1,6 @@
 use failure;
 use markdown;
+use page::Page;
 use std;
 use std::collections::{
     hash_map::Entry,
@@ -8,32 +9,8 @@ use std::collections::{
 use std::fs;
 use std::path::{Path, PathBuf};
 
-type Result<T> = std::result::Result<T, failure::Error>;
 type PageId = u32;
 pub type NarrowingTagsSet = HashMap<String, usize>;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Page {
-    pub title: String,
-    pub html: String,
-    fs_path: PathBuf,
-    pub tags: Vec<String>,
-}
-
-impl Page {
-    pub fn url(&self) -> String {
-        "/".to_string() + self.tags.join("/").as_str()
-    }
-
-    pub fn to_full_url(&self, prefer_exact: bool) -> String {
-        let mut location = String::from("/") + self.tags.join("/").as_str();
-        if !prefer_exact {
-            location += "/";
-        }
-
-        location
-    }
-}
 
 #[derive(Default)]
 pub struct State {
@@ -93,7 +70,7 @@ pub enum MatchType {
 }
 
 impl State {
-    pub fn insert_from_dir(dir_path: &Path) -> Result<State> {
+    pub fn insert_from_dir(dir_path: &Path) -> ::Result<State> {
         let mut state: State = Default::default();
         for entry in fs::read_dir(dir_path)? {
             let entry = entry?;
@@ -106,22 +83,8 @@ impl State {
         Ok(state)
     }
 
-    pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
-        let md = fs::read_to_string(md_path)?;
-        let (tags, html, title) = markdown::parse_markdown(&md);
-
-        let page_id = self.next_page_id;
-
-        let page = Page {
-            fs_path: md_path.into(),
-            html: html,
-            title: if title.is_empty() {
-                tags.join("/")
-            } else {
-                title
-            },
-            tags: tags,
-        };
+    pub fn insert_from_file(&mut self, md_path: &Path) -> ::Result<()> {
+        let page = Page::read_from_file(md_path)?;
 
         self.insert(page);
         Ok(())

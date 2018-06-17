@@ -3,7 +3,7 @@ use stpl::Render;
 
 use super::misc::*;
 use super::{base, misc};
-use data::Page;
+use page::Page;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Data {

@@ -5,7 +5,7 @@ use super::misc::*;
 use super::{base, misc};
 use std::collections::HashMap;
 
-use data::Page;
+use page::Page;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Data {

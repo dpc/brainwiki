@@ -1,4 +1,3 @@
-#![allow(unused)]
 #![feature(nll)]
 
 #[macro_use]
@@ -18,12 +17,15 @@ extern crate serde_json;
 extern crate stpl;
 
 use std::path::PathBuf;
+mod config;
 mod data;
 mod markdown;
 mod opts;
+mod page;
 mod tpl;
 mod web;
-mod config;
+
+type Result<T> = std::result::Result<T, failure::Error>;
 
 // GET /a/b/c - search for a post with a/b/c tag
 //   a is most important, c least important
