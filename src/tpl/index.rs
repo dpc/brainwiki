@@ -13,11 +13,12 @@ pub struct Data {
     pub cur_url: String,
     pub pages: Vec<Page>,
     pub narrowing_tags: ::data::NarrowingTagsSet,
+    pub matching_tags: Vec<String>,
 }
 
 pub fn page(data: &Data) -> impl Render {
     let content = (
-        misc::breadcrumb(vec!["TODO".into()]),
+        breadcrumb_from_tags(&data.matching_tags.as_slice()),
         row((
             misc::narrowing_tags_col(&data.cur_url, &data.narrowing_tags),
             col((

@@ -15,7 +15,7 @@ pub type NarrowingTagsSet = HashMap<String, usize>;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Page {
     pub title: String,
-    pub rendered: String,
+    pub html: String,
     fs_path: PathBuf,
     pub tags: Vec<String>,
 }
@@ -108,13 +108,13 @@ impl State {
 
     pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
         let md = fs::read_to_string(md_path)?;
-        let (tags, rendered, title) = markdown::parse_markdown(&md);
+        let (tags, html, title) = markdown::parse_markdown(&md);
 
         let page_id = self.next_page_id;
 
         let page = Page {
             fs_path: md_path.into(),
-            rendered: rendered,
+            html: html,
             title: if title.is_empty() {
                 tags.join("/")
             } else {
@@ -237,13 +237,13 @@ fn simple() {
     assert!(state.find_best_match(vec![]).is_none());
 
     let p1 = state.insert(Page {
-        rendered: "".into(),
+        html: "".into(),
         path: "".into(),
         tags: vec!["a".into(), "b".into()],
     });
 
     let p2 = state.insert(Page {
-        rendered: "".into(),
+        html: "".into(),
         path: "".into(),
         tags: vec!["a".into(), "c".into()],
     });

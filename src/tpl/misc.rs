@@ -113,6 +113,18 @@ pub fn url_append(base: &str, tag: &str) -> String {
     }
 }
 
+pub fn breadcrumb_from_tags(tags: &[String]) -> Box<Render> {
+    if tags.is_empty() {
+        Box::new(breadcrumb(vec!["Home".into()]))
+    } else {
+        Box::new(breadcrumb(
+            tags.iter()
+                .map(|tag| BreadCrumbItem::from(a.href(url_append("/", tag.as_str()))(tag.clone())))
+                .collect(),
+        ))
+    }
+}
+
 pub fn col<C: Render + 'static>(content: C) -> impl Render {
     div.class("col-9 px-4")(content)
 }

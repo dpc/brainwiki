@@ -48,12 +48,12 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
             if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
                 return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
             }
-            let html = page.rendered.clone();
+            let html = page.html.clone();
             let body = tpl::render(
                 &tpl::view_tpl(),
                 &tpl::view::Data {
                     base: tpl::base::Data {
-                        title: "TITLE_TBD".into(),
+                        title: page.title.clone(),
                     },
                     page: page.clone(),
                     cur_url: cur_url.into(),
@@ -67,7 +67,11 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
                 &tpl::index_tpl(),
                 &tpl::index::Data {
                     base: tpl::base::Data {
-                        title: "TITLE_TBD".into(),
+                        title: if match_.matching_tags.is_empty() {
+                            ::config::WIKI_NAME_TEXT.into()
+                        } else {
+                            match_.matching_tags.join("/")
+                        },
                     },
                     pages: page_ids
                         .iter()
@@ -75,6 +79,7 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
                         .collect(),
                     cur_url: cur_url.into(),
                     narrowing_tags: match_.narrowing_tags,
+                    matching_tags: match_.matching_tags,
                 },
             );
 

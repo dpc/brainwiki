@@ -23,6 +23,7 @@ mod markdown;
 mod opts;
 mod tpl;
 mod web;
+mod config;
 
 // GET /a/b/c - search for a post with a/b/c tag
 //   a is most important, c least important

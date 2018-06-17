@@ -18,7 +18,7 @@ pub fn navbar(data: &Data) -> impl Render {
     (nav.id("main-navbar").class(
         "navbar navbar-expand-sm navbar-dark bg-primary fixed-top",
     )((div.class("container")((
-        a.class("navbar-brand").href("/")("Hacker Audit"),
+        a.class("navbar-brand").href("/")(::config::WIKI_NAME_TEXT),
         button
             .class("navbar-toggler")
             .attr("type", "button")
@@ -29,19 +29,23 @@ pub fn navbar(data: &Data) -> impl Render {
             .aria_label("Toggle navigation")(span.class("navbar-toggler-icon")),
         div.id("navbar-collapse")
             .class("collapse navbar-collapse show")((
-            ul.class("navbar-nav")((li.class("nav-item dropdown")((
-                a.id("dropdown-top")
-                    .class("nav-link dropdown-toggle mr-auto")
-                    .href("/")
-                    .data_toggle("dropdown")
-                    .aria_haspopup("true")
-                    .aria_expanded("false")("Top"),
-                div.class("dropdown-menu").aria_labelledby("dropdown01")((a
-                    .class("dropdown-item")
-                    .href("/")(
-                    "Home"
-                ),)),
-            )),)),
+            ul.class("navbar-nav")((li.class("nav-item dropdown")(if false {
+                Some((
+                    a.id("dropdown-top")
+                        .class("nav-link dropdown-toggle mr-auto")
+                        .href("/")
+                        .data_toggle("dropdown")
+                        .aria_haspopup("true")
+                        .aria_expanded("false")("Top"),
+                    div.class("dropdown-menu").aria_labelledby("dropdown01")((a
+                        .class("dropdown-item")
+                        .href("/")(
+                        "Home"
+                    ),)),
+                ))
+            } else {
+                None
+            }),)),
             //session_menu(data),
         )),
     )),)),)
@@ -49,10 +53,7 @@ pub fn navbar(data: &Data) -> impl Render {
 
 pub fn my_footer() -> impl Render {
     footer.id("footer").class("container py-1 my-1")((row(div.class("col text-center mx-1 px-4")(
-        span((
-            "© 2017-2018 Copyright: ",
-            a.href(misc::url_base())("Hacker Audit"),
-        )),
+        span((::config::FOOTER_TEXT)),
     )),))
 }
 

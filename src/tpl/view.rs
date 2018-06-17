@@ -15,20 +15,10 @@ pub struct Data {
 
 pub fn page(data: &Data) -> impl Render {
     let content = (
-        misc::breadcrumb(
-            data.page
-                .tags
-                .iter()
-                .map(|tag| {
-                    misc::BreadCrumbItem::from(a.href(misc::url_append("/", tag.as_str()))(
-                        tag.clone(),
-                    ))
-                })
-                .collect(),
-        ),
+        breadcrumb_from_tags(&data.page.tags.as_slice()),
         row((
             misc::narrowing_tags_col(&data.cur_url, &data.narrowing_tags),
-            col(data.page.rendered.clone()),
+            col(data.page.html.clone()),
         )),
     );
 
