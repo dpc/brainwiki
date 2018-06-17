@@ -3,13 +3,12 @@ pub mod index;
 pub mod misc;
 pub mod view;
 
-use failure::{self, Fail};
 use serde;
 use std;
 use std::path::{Path, PathBuf};
 use stpl;
 use stpl::html;
-use stpl::{Template, TemplateExt};
+use stpl::Template;
 
 macro_rules! def_tpl {
     ($name:ident, $key:ident) => {

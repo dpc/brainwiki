@@ -1,9 +1,8 @@
 use super::base::Data;
-use std::env;
 use stpl::html::*;
 use stpl::Render;
 
-pub fn flash(data: &Data) -> (impl Render, impl Render) {
+pub fn flash(_data: &Data) -> (impl Render, impl Render) {
     (
         /*
         div.class("container")(data.flash.as_ref().map(|flash| {
@@ -18,44 +17,6 @@ pub fn flash(data: &Data) -> (impl Render, impl Render) {
     )
 }
 
-pub fn img_svg_icon_src(name: &str) -> String {
-    format!("/static/theme/Entypo+/Entypo+/{}.svg", name)
-}
-
-pub fn img_svg_icon(name: &'static str, white: bool) -> impl Render {
-    img.class(if white {
-        "svg icon icon-white"
-    } else {
-        "svg icon"
-    }).src(img_svg_icon_src(name))
-        .alt(name)
-}
-
-pub fn img_svg_miniicon(name: &'static str, white: bool) -> impl Render {
-    img.class(if white {
-        "svg icon mini-icon icon-white"
-    } else {
-        "svg mini-icom icon"
-    }).src(img_svg_icon_src(name))
-        .alt(name)
-}
-
-pub fn img_svg_icon_social_src(name: &str) -> String {
-    format!(
-        "/static/theme/Entypo+/Entypo+ Social Extension/{}.svg",
-        name
-    )
-}
-
-pub fn img_svg_icon_social(name: &'static str, white: bool) -> impl Render {
-    img.class(if white {
-        "svg icon icon-white"
-    } else {
-        "svg icon"
-    }).src(img_svg_icon_social_src(name))
-        .alt(name)
-}
-
 pub struct BreadCrumbItem(Box<Render>);
 
 impl<T: Render + 'static> From<T> for BreadCrumbItem {
@@ -65,19 +26,13 @@ impl<T: Render + 'static> From<T> for BreadCrumbItem {
 }
 
 pub fn breadcrumb(mut names: Vec<BreadCrumbItem>) -> impl Render {
-    let names_len = names.len();
-
     nav.aria_label("breadcrumb").role("navigation")(ol.class("breadcrumb")(
-        (names
+        names
             .drain(..)
             .enumerate()
-            .map(|(n, render)| Box::new(li.class("breadcrumb-item")(render.0)) as Box<Render>)
-            .collect::<Vec<Box<Render>>>()),
+            .map(|(_, render)| Box::new(li.class("breadcrumb-item")(render.0)) as Box<Render>)
+            .collect::<Vec<Box<Render>>>(),
     ))
-}
-
-pub fn url_base() -> String {
-    env::var("BASE_URL").unwrap_or_else(|_| "/".into())
 }
 
 pub fn narrowing_tags_col(cur_url: &str, narrowing_tags: &::data::NarrowingTagsSet) -> impl Render {

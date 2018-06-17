@@ -3,7 +3,6 @@ use stpl::Render;
 
 use super::misc::*;
 use super::{base, misc};
-use std::collections::HashMap;
 
 use page::Page;
 

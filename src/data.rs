@@ -1,13 +1,7 @@
-use failure;
-use markdown;
 use page::Page;
-use std;
-use std::collections::{
-    hash_map::Entry,
-    {HashMap, HashSet},
-};
+use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 type PageId = u32;
 pub type NarrowingTagsSet = HashMap<String, usize>;
@@ -90,7 +84,7 @@ impl State {
         Ok(())
     }
 
-    fn insert(&mut self, mut page: Page) -> PageId {
+    fn insert(&mut self, page: Page) -> PageId {
         let page_id = self.next_page_id;
         self.next_page_id += 1;
         self.all_pages.insert(page_id);
@@ -105,12 +99,12 @@ impl State {
         page_id
     }
 
-    pub fn find_best_match(&self, mut tags: Vec<String>, prefer_exact: bool) -> Match {
+    pub fn find_best_match(&self, tags: Vec<String>, prefer_exact: bool) -> Match {
         let mut matches: Option<HashSet<PageId>> = None;
         let mut matching_tags = vec![];
         let mut unmatched_tags = vec![];
 
-        for (i, tag) in tags.iter().cloned().enumerate() {
+        for tag in tags.iter().cloned() {
             if let Some(set) = self.tag_sets.get(&tag) {
                 let new_matches: HashSet<PageId> = matches
                     .as_ref()

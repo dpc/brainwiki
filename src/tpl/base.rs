@@ -1,4 +1,3 @@
-use super::misc;
 use super::misc::*;
 use stpl::html::*;
 use stpl::Render;
@@ -14,7 +13,7 @@ pub struct Data {
     pub title: String,
 }
 
-pub fn navbar(data: &Data) -> impl Render {
+pub fn navbar(_data: &Data) -> impl Render {
     (nav.id("main-navbar").class(
         "navbar navbar-expand-sm navbar-dark bg-primary fixed-top",
     )((div.class("container")((
@@ -53,7 +52,7 @@ pub fn navbar(data: &Data) -> impl Render {
 
 pub fn my_footer() -> impl Render {
     footer.id("footer").class("container py-1 my-1")((row(div.class("col text-center mx-1 px-4")(
-        span((::config::FOOTER_TEXT)),
+        span(::config::FOOTER_TEXT),
     )),))
 }
 
@@ -79,9 +78,9 @@ pub fn base_with_js(
                 title(data.title.clone()),
 
                 (
-                    link.rel("icon").href("/~static/favicon.ico"),
-                    link.rel("stylesheet").href("/~static/theme/flatly/bootstrap.min.css"),
-                    link.rel("stylesheet").href("/~static/theme/custom.css"),
+                    link.rel("icon").href("/~theme/favicon.ico"),
+                    link.rel("stylesheet").href("/~theme/bootstrap.min.css"),
+                    link.rel("stylesheet").href("/~theme/custom.css"),
                 )
             )),
             body(wrapper.class("d-flex flex-column")((

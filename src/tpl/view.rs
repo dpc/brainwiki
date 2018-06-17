@@ -1,4 +1,3 @@
-use stpl::html::*;
 use stpl::Render;
 
 use super::misc::*;

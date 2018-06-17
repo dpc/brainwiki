@@ -1,12 +1,8 @@
-use actix_web::dev::ResourceHandler;
-use actix_web::middleware::session::RequestSession;
-use actix_web::{
-    error, fs, middleware, pred, server, App, Error, HttpRequest, HttpResponse, Responder, Result,
-};
-use actix_web::{http, Path};
+use actix_web::http;
+use actix_web::{error, fs, server, App, HttpRequest, HttpResponse, Responder, Result};
 use std::sync;
 
-use data::{self, Match, MatchType};
+use data::{self, MatchType};
 use opts::Opts;
 
 use tpl;
@@ -48,7 +44,6 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
             if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
                 return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
             }
-            let html = page.html.clone();
             let body = tpl::render(
                 &tpl::view_tpl(),
                 &tpl::view::Data {
@@ -98,13 +93,13 @@ struct State {
 pub fn start(data: data::State, opts: Opts) {
     let state = State {
         data: sync::Arc::new(sync::RwLock::new(data)),
-        opts,
+        opts: opts.clone(),
     };
     server::new(move || {
         App::with_state(state.clone())
             //.route("/", http::Method::GET, index)
             .route("/~login", http::Method::GET, login)
-            .handler("/~static", fs::StaticFiles::new("./static"))
+            .handler("/~theme", fs::StaticFiles::new(opts.theme_dir.clone()))
             .default_resource(|r| r.get().f(def))
     }).bind("127.0.0.1:8080")
         .unwrap()
