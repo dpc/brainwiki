@@ -3,31 +3,6 @@ body {
   font-size: 18px;
 }
 
-.icon {
-    width: 1em;
-    margin: 0px;
-    margin-left: 0.2em;
-    margin-right: 0.2em;
-    align-self: center;
-}
-
-.mini-icon {
-    width: 0.8em;
-    margin: 0px;
-    padding-bottom: 0.2em;
-    align-self: center;
-}
-
-.icon-white path {
-  fill: #fff !important;
-}
-
-.replaced-svg {
-  bottom: -0.125em;
-  display: inline-block;
-  vertical-align: middle;
-}
-
 #session-menu {
   margin-left: 0.2em;
   margin-right: 0.2em;
@@ -77,4 +52,11 @@ body, wrapper {
 
 main {
     flex:1;
+}
+
+#editor {
+
+	height: 16em;
+	/*width: 16em;*/
+	width: 100%;
 }

@@ -1,3 +1,4 @@
+use stpl::html::{div, raw, script};
 use stpl::Render;
 
 use super::misc::*;
@@ -28,7 +29,27 @@ pub fn page(data: &Data) -> impl Render {
             )),
             col(data.page.html.clone()),
         )),
+        row(div.id("editor")(data.page.md.clone())),
     );
 
-    base::base(&data.base, Box::new(content))
+    fn ace_script(f: &str) -> impl Render {
+        script
+            .src(format!("https://cdnjs.cloudflare.com/ajax/libs/ace/1.3.3/{}", f))
+            .type_("text/javascript")
+            .charset("utf-8")
+    }
+
+    let js = (
+        ace_script("ace.js"),
+        ace_script("keybinding-vim.js"),
+        ace_script("mode-markdown.js"),
+        script.type_("text/javascript")(raw(ACE_JS)),
+    );
+    base::base_with_js(
+        &data.base,
+        Box::new(content),
+        Box::new(js),
+    )
 }
+
+const ACE_JS: &str = include_str!("ace.js");

@@ -8,6 +8,7 @@ use Result;
 pub struct Page {
     pub title: String,
     pub html: String,
+    pub md: String,
     pub fs_path: PathBuf,
     pub tags: Vec<String>,
 }
@@ -20,6 +21,7 @@ impl Page {
         let page = Page {
             fs_path: path.canonicalize()?,
             html: html,
+            md: md,
             title: if title.is_empty() {
                 tags.join("/")
             } else {

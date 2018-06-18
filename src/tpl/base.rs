@@ -85,7 +85,7 @@ pub fn base_with_js(
                 meta.charset("utf-8"),
                 meta.name("viewport").content("width=device-width, initial-scale=1, shrink-to-fit=no"),
                 meta.name("description").content(""),
-                meta.name("author").content("Hacker Audit team"),
+                meta.name("author").content(::config::AUTHOR),
                 title(data.title.clone()),
 
                 (
@@ -112,9 +112,6 @@ pub fn base_with_js(
                 script.src("https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js")
                     .integrity("sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ")
                     .crossorigin("anonymous"),
-                script.type_("text/javascript")(
-                    raw(WHITE_ICONS_SCRIPT)
-                ),
                 flash_js,
                 js,
                 )
@@ -122,5 +119,3 @@ pub fn base_with_js(
         ))
     )
 }
-
-const WHITE_ICONS_SCRIPT: &str = include_str!("white-icon.js");
