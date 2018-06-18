@@ -19,13 +19,20 @@ pub fn page(data: &Data) -> impl Render {
     let content = (
         breadcrumb_from_tags(&data.matching_tags.as_slice()),
         row((
-            misc::narrowing_tags_col(&data.cur_url, &data.narrowing_tags),
+            misc::narrowing_tags_col(
+                &data.cur_url,
+                &data.narrowing_tags,
+            ),
             col((
                 h2("Pages"),
                 ul(data
                     .pages
                     .iter()
-                    .map(|page| li(a.href(page.url())(page.title.clone())))
+                    .map(|page| {
+                        li(a.href(page.url())(
+                            page.title.clone(),
+                        ))
+                    })
                     .collect::<Vec<_>>()),
             )),
         )),

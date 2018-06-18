@@ -2,7 +2,6 @@
 authors = ["Dawid Ciężarkiewicz <dpc@dpc.pw>"]
 name = "brainwiki"
 version = "0.1.0"
-
 [[bin]]
 name = "brainwiki"
 path = "src/main.rs"
@@ -11,10 +10,13 @@ path = "src/main.rs"
 actix-web = "*"
 failure = "*"
 lazy_static = "*"
+notify = "*"
 pulldown-cmark = "*"
 regex = "*"
-structopt = "*"
-stpl = { git = "http://github.com/dpc/stpl" }
 serde = "*"
 serde_derive = "*"
 serde_json = "*"
+structopt = "*"
+
+[dependencies.stpl]
+git = "http://github.com/dpc/stpl"

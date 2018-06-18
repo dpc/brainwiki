@@ -5,7 +5,9 @@ pub type Tag = String;
 pub type RenderedHtml = String;
 pub type Title = String;
 
-pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml, Title) {
+pub fn parse_markdown(
+    markdown_text: &str,
+) -> (Vec<Tag>, RenderedHtml, Title) {
     lazy_static! {
         static ref RE: Regex = Regex::new(r"#[\w\d]+").unwrap();
     }
@@ -23,7 +25,9 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml, Title) {
             Event::Text(text) => {
                 if code_tag_level == 0 {
                     for tag in RE.find_iter(&text) {
-                        tags.push(tag.as_str()[1..].to_lowercase());
+                        tags.push(
+                            tag.as_str()[1..].to_lowercase(),
+                        );
                     }
                 }
 
@@ -34,7 +38,9 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml, Title) {
                 Event::Text(text)
             }
             Event::Start(::pulldown_cmark::Tag::Code)
-            | Event::Start(::pulldown_cmark::Tag::CodeBlock(_)) => {
+            | Event::Start(::pulldown_cmark::Tag::CodeBlock(
+                _,
+            )) => {
                 code_tag_level += 1;
                 event
             }
@@ -80,7 +86,10 @@ Foo bar #X.
     "#,
     );
 
-    assert_eq!(tags, ["bar", "baz", "ciężarkiewicz", "foo", "list", "x"]);
+    assert_eq!(
+        tags,
+        ["bar", "baz", "ciężarkiewicz", "foo", "list", "x"]
+    );
 }
 
 #[test]

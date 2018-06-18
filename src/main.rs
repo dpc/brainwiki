@@ -7,11 +7,12 @@ extern crate pulldown_cmark;
 extern crate regex;
 #[macro_use]
 extern crate structopt;
-#[macro_use]
+//#[macro_use]
 extern crate failure;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate notify;
 extern crate serde_json;
 extern crate stpl;
 
@@ -43,9 +44,16 @@ type Result<T> = std::result::Result<T, failure::Error>;
 
 fn main() {
     let opts = opts::from_args();
-    markdown::parse_markdown(&"");
+    markdown::parse_markdown("");
 
-    let data = data::State::insert_from_dir(&opts.data_dir).unwrap();
+    let state = data::SyncState::new();
 
-    web::start(data, opts);
+    let _watcher = data::FsWatcher::new(
+        opts.data_dir.clone(),
+        state.clone(),
+    );
+
+    state.write().insert_from_dir(&opts.data_dir).unwrap();
+
+    web::start(state, opts);
 }

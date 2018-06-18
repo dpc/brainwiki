@@ -8,7 +8,7 @@ use Result;
 pub struct Page {
     pub title: String,
     pub html: String,
-    fs_path: PathBuf,
+    pub fs_path: PathBuf,
     pub tags: Vec<String>,
 }
 
@@ -18,7 +18,7 @@ impl Page {
         let (tags, html, title) = markdown::parse_markdown(&md);
 
         let page = Page {
-            fs_path: path.into(),
+            fs_path: path.canonicalize()?,
             html: html,
             title: if title.is_empty() {
                 tags.join("/")
@@ -36,7 +36,8 @@ impl Page {
     }
 
     pub fn to_full_url(&self, prefer_exact: bool) -> String {
-        let mut location = String::from("/") + self.tags.join("/").as_str();
+        let mut location =
+            String::from("/") + self.tags.join("/").as_str();
         if !prefer_exact {
             location += "/";
         }

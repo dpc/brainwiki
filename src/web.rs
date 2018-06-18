@@ -1,6 +1,8 @@
 use actix_web::http;
-use actix_web::{error, fs, server, App, HttpRequest, HttpResponse, Responder, Result};
-use std::sync;
+use actix_web::{
+    error, fs, server, App, HttpRequest, HttpResponse,
+    Responder, Result,
+};
 
 use data::{self, MatchType};
 use opts::Opts;
@@ -20,10 +22,13 @@ fn redirect_to(location: &str) -> HttpResponse {
         .header("Location", location)
         .finish()
 }
-fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+fn def(
+    req: HttpRequest<State>,
+) -> Result<HttpResponse, error::Error> {
     let cur_url = req.path();
-    let mut tags: Vec<String> = cur_url.split("/").skip(1).map(Into::into).collect();
-    let data = req.state().data.read().unwrap();
+    let mut tags: Vec<String> =
+        cur_url.split("/").skip(1).map(Into::into).collect();
+    let data = req.state().data.read();
 
     let prefer_exact = if tags.last() == Some(&"".into()) {
         tags.pop();
@@ -32,17 +37,24 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
         true
     };
 
-    let match_ = data.find_best_match(tags.clone(), prefer_exact);
+    let match_ =
+        data.find_best_match(tags.clone(), prefer_exact);
 
     if match_.has_unmatched_tags() {
-        return Ok(redirect_to(match_.to_precise_url(prefer_exact).as_str()));
+        return Ok(redirect_to(
+            match_.to_precise_url(prefer_exact).as_str(),
+        ));
     }
 
     match match_.type_ {
         MatchType::One(page_id) => {
             let page = data.pages_by_id.get(&page_id).unwrap();
-            if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
-                return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
+            if match_.is_one()
+                && match_.matching_tags.len() < page.tags.len()
+            {
+                return Ok(redirect_to(
+                    page.to_full_url(prefer_exact).as_str(),
+                ));
             }
             let body = tpl::render(
                 &tpl::view_tpl(),
@@ -62,7 +74,8 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
                 &tpl::index_tpl(),
                 &tpl::index::Data {
                     base: tpl::base::Data {
-                        title: if match_.matching_tags.is_empty() {
+                        title: if match_.matching_tags.is_empty()
+                        {
                             ::config::WIKI_NAME_TEXT.into()
                         } else {
                             match_.matching_tags.join("/")
@@ -70,7 +83,12 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
                     },
                     pages: page_ids
                         .iter()
-                        .map(|page_id| data.pages_by_id.get(&page_id).unwrap().clone())
+                        .map(|page_id| {
+                            data.pages_by_id
+                                .get(&page_id)
+                                .unwrap()
+                                .clone()
+                        })
                         .collect(),
                     cur_url: cur_url.into(),
                     narrowing_tags: match_.narrowing_tags,
@@ -80,19 +98,21 @@ fn def(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
 
             Ok(HttpResponse::Ok().body(body))
         }
-        MatchType::None => Ok(HttpResponse::Ok().body(format!("Not Found :("))),
+        MatchType::None => {
+            Ok(HttpResponse::Ok().body(format!("Not Found :(")))
+        }
     }
 }
 
 #[derive(Clone)]
 struct State {
-    data: sync::Arc<sync::RwLock<data::State>>,
+    data: ::data::SyncState,
     opts: Opts,
 }
 
-pub fn start(data: data::State, opts: Opts) {
+pub fn start(data: data::SyncState, opts: Opts) {
     let state = State {
-        data: sync::Arc::new(sync::RwLock::new(data)),
+        data: data,
         opts: opts.clone(),
     };
     server::new(move || {

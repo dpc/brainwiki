@@ -25,19 +25,29 @@ impl<T: Render + 'static> From<T> for BreadCrumbItem {
     }
 }
 
-pub fn breadcrumb(mut names: Vec<BreadCrumbItem>) -> impl Render {
-    nav.aria_label("breadcrumb").role("navigation")(ol.class("breadcrumb")(
+pub fn breadcrumb(
+    mut names: Vec<BreadCrumbItem>,
+) -> impl Render {
+    nav.aria_label("breadcrumb").role("navigation")(ol
+        .class("breadcrumb")(
         names
             .drain(..)
             .enumerate()
-            .map(|(_, render)| Box::new(li.class("breadcrumb-item")(render.0)) as Box<Render>)
+            .map(|(_, render)| {
+                Box::new(li.class("breadcrumb-item")(render.0))
+                    as Box<Render>
+            })
             .collect::<Vec<Box<Render>>>(),
     ))
 }
 
-pub fn narrowing_tags_col(cur_url: &str, narrowing_tags: &::data::NarrowingTagsSet) -> impl Render {
+pub fn narrowing_tags_col(
+    cur_url: &str,
+    narrowing_tags: &::data::NarrowingTagsSet,
+) -> impl Render {
     col_menu(if !narrowing_tags.is_empty() {
-        let mut list: Vec<(_, _)> = narrowing_tags.iter().collect();
+        let mut list: Vec<(_, _)> =
+            narrowing_tags.iter().collect();
         list.sort_by(|n, m| n.0.cmp(m.0));
         Some((
             h2("Tags"),
@@ -74,7 +84,12 @@ pub fn breadcrumb_from_tags(tags: &[String]) -> Box<Render> {
     } else {
         Box::new(breadcrumb(
             tags.iter()
-                .map(|tag| BreadCrumbItem::from(a.href(url_append("/", tag.as_str()))(tag.clone())))
+                .map(|tag| {
+                    BreadCrumbItem::from(a
+                        .href(url_append("/", tag.as_str()))(
+                        tag.clone(),
+                    ))
+                })
                 .collect(),
         ))
     }

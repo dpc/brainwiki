@@ -25,38 +25,49 @@ pub fn navbar(_data: &Data) -> impl Render {
             .data_target("#navbar-collapse")
             .aria_controls("navbar-collapse")
             .aria_expanded("false")
-            .aria_label("Toggle navigation")(span.class("navbar-toggler-icon")),
+            .aria_label("Toggle navigation")(
+            span.class("navbar-toggler-icon"),
+        ),
         div.id("navbar-collapse")
             .class("collapse navbar-collapse show")((
-            ul.class("navbar-nav")((li.class("nav-item dropdown")(if false {
-                Some((
-                    a.id("dropdown-top")
-                        .class("nav-link dropdown-toggle mr-auto")
-                        .href("/")
-                        .data_toggle("dropdown")
-                        .aria_haspopup("true")
-                        .aria_expanded("false")("Top"),
-                    div.class("dropdown-menu").aria_labelledby("dropdown01")((a
-                        .class("dropdown-item")
-                        .href("/")(
-                        "Home"
-                    ),)),
-                ))
-            } else {
-                None
-            }),)),
+            ul.class("navbar-nav")((li.class("nav-item dropdown")(
+                if false {
+                    Some((
+                        a.id("dropdown-top")
+                            .class("nav-link dropdown-toggle mr-auto")
+                            .href("/")
+                            .data_toggle("dropdown")
+                            .aria_haspopup("true")
+                            .aria_expanded("false")(
+                            "Top"
+                        ),
+                        div.class("dropdown-menu")
+                            .aria_labelledby("dropdown01")(
+                            (
+                            a.class("dropdown-item").href("/")("Home"),
+                        )
+                        ),
+                    ))
+                } else {
+                    None
+                },
+            ),)),
             //session_menu(data),
         )),
     )),)),)
 }
 
 pub fn my_footer() -> impl Render {
-    footer.id("footer").class("container py-1 my-1")((row(div.class("col text-center mx-1 px-4")(
+    footer.id("footer").class("container py-1 my-1")((row(div
+        .class("col text-center mx-1 px-4")(
         span(::config::FOOTER_TEXT),
     )),))
 }
 
-pub fn base(data: &Data, content: Box<Render + 'static>) -> impl Render {
+pub fn base(
+    data: &Data,
+    content: Box<Render + 'static>,
+) -> impl Render {
     base_with_js(data, content, Box::new(()))
 }
 

@@ -12,8 +12,12 @@ use stpl::Template;
 
 macro_rules! def_tpl {
     ($name:ident, $key:ident) => {
-        pub fn $name() -> impl Template<Argument = ::tpl::$key::Data> {
-            html::Template::new(stringify!($key), ::tpl::$key::page)
+        pub fn $name(
+        ) -> impl Template<Argument = ::tpl::$key::Data> {
+            html::Template::new(
+                stringify!($key),
+                ::tpl::$key::page,
+            )
         }
     };
 }
@@ -21,7 +25,10 @@ macro_rules! def_tpl {
 def_tpl!(view_tpl, view);
 def_tpl!(index_tpl, index);
 
-pub fn render<T: stpl::Template>(template: &T, data: &<T as Template>::Argument) -> Vec<u8>
+pub fn render<T: stpl::Template>(
+    template: &T,
+    data: &<T as Template>::Argument,
+) -> Vec<u8>
 where
     <T as Template>::Argument: serde::Serialize + 'static,
 {
