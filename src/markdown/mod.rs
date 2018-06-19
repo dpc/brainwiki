@@ -16,6 +16,8 @@ pub fn parse_markdown(
     let mut html_buf = String::new();
     let mut in_title = 0u32;
     let mut title = String::new();
+    let mut backup_title = String::new();
+    let max_backup_title_len = 100;
 
     let mut code_tag_level = 0;
     {
@@ -29,6 +31,15 @@ pub fn parse_markdown(
                             tag.as_str()[1..].to_lowercase(),
                         );
                     }
+                }
+
+                if backup_title.len() < max_backup_title_len {
+                    let mut append = text.to_string();
+                    append.truncate(
+                        max_backup_title_len
+                            - backup_title.len(),
+                    );
+                    backup_title.push_str(&append.as_str());
                 }
 
                 if in_title > 0 {
@@ -69,6 +80,11 @@ pub fn parse_markdown(
     tags.sort();
     tags.dedup();
 
+    let title = if title.is_empty() {
+        backup_title
+    } else {
+        title
+    };
     (tags, html_buf, title)
 }
 

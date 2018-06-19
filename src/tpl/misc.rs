@@ -45,12 +45,12 @@ pub fn narrowing_tags_col(
     cur_url: &str,
     narrowing_tags: &::data::NarrowingTagsSet,
 ) -> impl Render {
-    col_menu(if !narrowing_tags.is_empty() {
+    if !narrowing_tags.is_empty() {
         let mut list: Vec<(_, _)> =
             narrowing_tags.iter().collect();
         list.sort_by(|n, m| n.0.cmp(m.0));
         Some((
-            h2("Tags"),
+            h4("Narrow down"),
             p(list
                 .iter()
                 .map(|(tag, nums)| {
@@ -67,9 +67,44 @@ pub fn narrowing_tags_col(
         ))
     } else {
         None
-    })
+    }
 }
 
+pub fn broadening_tags_col(
+    cur_url: &str,
+    mut tags: Vec<String>,
+) -> impl Render {
+    if !tags.is_empty() {
+        tags.sort_by(|n, m| n.cmp(m));
+        Some((
+            h4("Without tag"),
+            p(tags
+                .iter()
+                .map(|tag_to_skip| {
+                    let tags_without_skipped_tag : Vec<String> = tags
+                        .iter()
+                        .filter(|t| *t != tag_to_skip)
+                        .cloned()
+                        .collect();
+                    (
+                        a.href(
+                            "/".to_string()
+                                + tags_without_skipped_tag
+                                    .join("/")
+                                    .as_str(),
+                        )(format!(
+                            "#{}",
+                            tag_to_skip
+                        )),
+                        " ",
+                    )
+                })
+                .collect::<Vec<_>>()),
+        ))
+    } else {
+        None
+    }
+}
 pub fn url_append(base: &str, tag: &str) -> String {
     if base.as_bytes().last().cloned() == Some('/' as u8) {
         format!("{}{}/", base, tag)
@@ -98,6 +133,7 @@ pub fn breadcrumb_from_tags(tags: &[String]) -> Box<Render> {
 pub fn col<C: Render + 'static>(content: C) -> impl Render {
     div.class("col-9 px-4")(content)
 }
+
 pub fn col_menu<C: Render + 'static>(content: C) -> impl Render {
     div.class("col-3 px-4")(content)
 }

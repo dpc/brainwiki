@@ -19,12 +19,12 @@ pub fn page(data: &Data) -> impl Render {
     let content = (
         breadcrumb_from_tags(&data.matching_tags.as_slice()),
         row((
-            misc::narrowing_tags_col(
+            col_menu(misc::narrowing_tags_col(
                 &data.cur_url,
                 &data.narrowing_tags,
-            ),
+            )),
             col((
-                h2("Pages"),
+                h2("Matching Pages"),
                 ul(data
                     .pages
                     .iter()

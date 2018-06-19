@@ -16,10 +16,16 @@ pub fn page(data: &Data) -> impl Render {
     let content = (
         breadcrumb_from_tags(&data.page.tags.as_slice()),
         row((
-            misc::narrowing_tags_col(
-                &data.cur_url,
-                &data.narrowing_tags,
-            ),
+            col_menu((
+                misc::narrowing_tags_col(
+                    &data.cur_url,
+                    &data.narrowing_tags,
+                ),
+                misc::broadening_tags_col(
+                    &data.cur_url,
+                    data.page.tags.clone(),
+                ),
+            )),
             col(data.page.html.clone()),
         )),
     );

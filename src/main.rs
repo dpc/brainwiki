@@ -1,3 +1,35 @@
+//! BrainWiki is a wiki where everything is addressed
+//! using tags. This allows organization without any premeditated structure.
+//!
+//! Eg.
+//!
+//! ```markdown
+//! [My idea about brainwiki](/idea/brainwiki)
+//! ```
+//!
+//! will link to any/all pages that contain #idea and #brainwiki tags,
+//! potentially broadening the search to the first best match.
+//!
+//! The goal is simplicity and minimalism. UI based on Bootstrap.
+//!
+//! Goals:
+//!
+//! * minimalism and simplicity
+//! * easy deployment
+//! * low resource consumption
+//!
+//! Current status: works in it's basic form.
+//!
+//! It supports:
+//!
+//! * markdown
+//! * watching for FS changes
+//!
+//! In plans:
+//!
+//! * ACE editor integration
+//!
+
 #![feature(nll)]
 
 #[macro_use]
@@ -25,22 +57,6 @@ mod tpl;
 mod web;
 
 type Result<T> = std::result::Result<T, failure::Error>;
-
-// GET /a/b/c - search for a post with a/b/c tag
-//   a is most important, c least important
-//   if unique match, it's page id - respond with id
-//   if not unique, respond with list of tags and posts to qualify
-//   if no matches, remove c, try again
-//
-// POST / - create a new page
-//    if the page with the same tags exists, return error
-// PUT /a/b/c - update page
-//    if the page with the same tags exists, return error
-//
-// DELETE /id - delete page
-//
-// POST /~login login
-// ANY /~... other special stuff
 
 fn main() {
     let opts = opts::from_args();

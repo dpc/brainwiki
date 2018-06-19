@@ -1,3 +1,19 @@
+// GET /a/b/c - search for a post with a/b/c tag
+//   a is most important, c least important
+//   if unique match, it's page id - respond with id
+//   if not unique, respond with list of tags and posts to qualify
+//   if no matches, remove c, try again
+//
+// POST / - create a new page
+//    if the page with the same tags exists, return error
+// PUT /a/b/c - update page
+//    if the page with the same tags exists, return error
+//
+// DELETE /id - delete page
+//
+// POST /~login login
+// ANY /~... other special stuff
+
 use actix_web::http;
 use actix_web::{
     error, fs, server, App, HttpRequest, HttpResponse,
@@ -22,6 +38,7 @@ fn redirect_to(location: &str) -> HttpResponse {
         .header("Location", location)
         .finish()
 }
+
 fn def(
     req: HttpRequest<State>,
 ) -> Result<HttpResponse, error::Error> {
@@ -70,6 +87,16 @@ fn def(
             Ok(HttpResponse::Ok().body(body))
         }
         MatchType::Many(page_ids) => {
+            let mut pages: Vec<_> = page_ids
+                .iter()
+                .map(|page_id| {
+                    data.pages_by_id
+                        .get(&page_id)
+                        .unwrap()
+                        .clone()
+                })
+                .collect();
+            pages.sort_by(|n, m| n.title.cmp(&m.title));
             let body = tpl::render(
                 &tpl::index_tpl(),
                 &tpl::index::Data {
@@ -81,15 +108,7 @@ fn def(
                             match_.matching_tags.join("/")
                         },
                     },
-                    pages: page_ids
-                        .iter()
-                        .map(|page_id| {
-                            data.pages_by_id
-                                .get(&page_id)
-                                .unwrap()
-                                .clone()
-                        })
-                        .collect(),
+                    pages: pages,
                     cur_url: cur_url.into(),
                     narrowing_tags: match_.narrowing_tags,
                     matching_tags: match_.matching_tags,

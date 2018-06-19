@@ -2,6 +2,8 @@
 authors = ["Dawid Ciężarkiewicz <dpc@dpc.pw>"]
 name = "brainwiki"
 version = "0.1.0"
+license = "MPL-2.0"
+
 [[bin]]
 name = "brainwiki"
 path = "src/main.rs"
