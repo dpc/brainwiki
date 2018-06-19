@@ -1,5 +1,8 @@
-//! BrainWiki is a wiki where everything is addressed
-//! using tags. This allows organization without any premeditated structure.
+//! BrainWiki is a wiki where everything is addressed using tags. This allows
+//! organization without any premeditated structure.
+//!
+//! Created for personal use, to help me gather and view my messy md
+//! notes.
 //!
 //! Eg.
 //!
@@ -10,15 +13,13 @@
 //! will link to any/all pages that contain #idea and #brainwiki tags,
 //! potentially broadening the search to the first best match.
 //!
-//! The goal is simplicity and minimalism. UI based on Bootstrap.
-//!
 //! Goals:
 //!
 //! * minimalism and simplicity
 //! * easy deployment
 //! * low resource consumption
 //!
-//! Current status: works in it's basic form.
+//! Current status: usable in it's basic form.
 //!
 //! It supports:
 //!
@@ -29,6 +30,11 @@
 //!
 //! * ACE editor integration
 //!
+//! UI based on Bootstrap. Written in Rust using actix-web.
+//!
+//! ### Using
+//!
+//! Clone, `cargo build`. Run the binary with `--data <dir-with-md-files>`
 
 #![feature(nll)]
 
