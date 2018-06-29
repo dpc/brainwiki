@@ -3,16 +3,6 @@ body {
   font-size: 18px;
 }
 
-#session-menu {
-  margin-left: 0.2em;
-  margin-right: 0.2em;
-}
-
-#search-navigation li.fixed-size{
-  width: 3em;
-  text-align: center;
-}
-
 .text-align-center {
   text-align: center;
 }
@@ -55,8 +45,6 @@ main {
 }
 
 #editor {
-
-	height: 16em;
-	/*width: 16em;*/
-	width: 100%;
+    height: 80vh;
+    width: 100%;
 }

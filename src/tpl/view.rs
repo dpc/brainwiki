@@ -1,4 +1,4 @@
-use stpl::html::{div, raw, script};
+use stpl::html::{button, div, p, raw, script};
 use stpl::Render;
 
 use super::misc::*;
@@ -27,9 +27,32 @@ pub fn page(data: &Data) -> impl Render {
                     data.page.tags.clone(),
                 ),
             )),
-            col(data.page.html.clone()),
+            col((
+                div.id("view_tab")((
+                    data.page.html.clone(),
+                    button
+                        .id("edit")
+                        .type_("button")
+                        .class("btn btn-primary")(
+                        "Edit"
+                    ),
+                )),
+                div.id("edit_tab")
+                    .attr("style", "display: none;")(
+                    (
+                    div.id("editor").class("my-2")(
+                        data.page.md.clone(),
+                    ),
+                    button
+                        .id("save")
+                        .type_("button")
+                        .class("btn btn-primary")(
+                        "Save"
+                    ),
+                )
+                ),
+            )),
         )),
-        row(div.id("editor")(data.page.md.clone())),
     );
 
     fn ace_script(f: &str) -> impl Render {
@@ -43,13 +66,13 @@ pub fn page(data: &Data) -> impl Render {
         ace_script("ace.js"),
         ace_script("keybinding-vim.js"),
         ace_script("mode-markdown.js"),
-        script.type_("text/javascript")(raw(ACE_JS)),
+        script.type_("text/javascript")(raw(VIEW_JS)),
     );
+
     base::base_with_js(
         &data.base,
         Box::new(content),
         Box::new(js),
     )
 }
-
-const ACE_JS: &str = include_str!("ace.js");
+const VIEW_JS: &str = include_str!("view.js");
