@@ -1,4 +1,4 @@
-use stpl::html::{button, div, p, raw, script};
+use stpl::html::{button, div, raw, script};
 use stpl::Render;
 
 use super::misc::*;
@@ -18,46 +18,28 @@ pub fn page(data: &Data) -> impl Render {
         breadcrumb_from_tags(&data.page.tags.as_slice()),
         row((
             col_menu((
-                misc::narrowing_tags_col(
-                    &data.cur_url,
-                    &data.narrowing_tags,
-                ),
-                misc::broadening_tags_col(
-                    &data.cur_url,
-                    data.page.tags.clone(),
-                ),
+                misc::narrowing_tags_col(&data.cur_url, &data.narrowing_tags),
+                misc::broadening_tags_col(&data.cur_url, data.page.tags.clone()),
             )),
             col((
                 div.id("view_tab")((
                     data.page.html.clone(),
-                    button
-                        .id("edit")
-                        .type_("button")
-                        .class("btn btn-primary")(
-                        "Edit"
-                    ),
+                    button.id("edit").type_("button").class("btn btn-primary")("Edit"),
                 )),
-                div.id("edit_tab")
-                    .attr("style", "display: none;")(
-                    (
-                    div.id("editor").class("my-2")(
-                        data.page.md.clone(),
-                    ),
-                    button
-                        .id("save")
-                        .type_("button")
-                        .class("btn btn-primary")(
-                        "Save"
-                    ),
-                )
-                ),
+                div.id("edit_tab").attr("style", "display: none;")((
+                    div.id("editor").class("my-2")(data.page.md.clone()),
+                    button.id("save").type_("button").class("btn btn-primary")("Save"),
+                )),
             )),
         )),
     );
 
     fn ace_script(f: &str) -> impl Render {
         script
-            .src(format!("https://cdnjs.cloudflare.com/ajax/libs/ace/1.3.3/{}", f))
+            .src(format!(
+                "https://cdnjs.cloudflare.com/ajax/libs/ace/1.3.3/{}",
+                f
+            ))
             .type_("text/javascript")
             .charset("utf-8")
     }
@@ -69,10 +51,6 @@ pub fn page(data: &Data) -> impl Render {
         script.type_("text/javascript")(raw(VIEW_JS)),
     );
 
-    base::base_with_js(
-        &data.base,
-        Box::new(content),
-        Box::new(js),
-    )
+    base::base_with_js(&data.base, Box::new(content), Box::new(js))
 }
 const VIEW_JS: &str = include_str!("view.js");

@@ -15,10 +15,8 @@
 // ANY /~... other special stuff
 
 use actix_web::http;
-use actix_web::{
-    error, fs, server, App, HttpRequest, HttpResponse,
-    Responder, Result,
-};
+use actix_web::middleware::{Finished, Middleware, Started};
+use actix_web::{error, fs, server, App, HttpRequest, HttpResponse, Responder, Result};
 
 use data::{self, MatchType};
 use opts::Opts;
@@ -39,12 +37,18 @@ fn redirect_to(location: &str) -> HttpResponse {
         .finish()
 }
 
-fn def(
-    req: HttpRequest<State>,
-) -> Result<HttpResponse, error::Error> {
+fn post(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+    println!("WOOFHOO");
+    Ok(HttpResponse::Ok().body("{}"))
+}
+
+fn put(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+    Ok(HttpResponse::Conflict().body("{}"))
+}
+//    Ok(HttpResponse::c().body("{}"))
+fn get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
     let cur_url = req.path();
-    let mut tags: Vec<String> =
-        cur_url.split("/").skip(1).map(Into::into).collect();
+    let mut tags: Vec<String> = cur_url.split("/").skip(1).map(Into::into).collect();
     let data = req.state().data.read();
 
     let prefer_exact = if tags.last() == Some(&"".into()) {
@@ -54,24 +58,17 @@ fn def(
         true
     };
 
-    let match_ =
-        data.find_best_match(tags.clone(), prefer_exact);
+    let match_ = data.find_best_match(tags.clone(), prefer_exact);
 
     if match_.has_unmatched_tags() {
-        return Ok(redirect_to(
-            match_.to_precise_url(prefer_exact).as_str(),
-        ));
+        return Ok(redirect_to(match_.to_precise_url(prefer_exact).as_str()));
     }
 
     match match_.type_ {
         MatchType::One(page_id) => {
             let page = data.pages_by_id.get(&page_id).unwrap();
-            if match_.is_one()
-                && match_.matching_tags.len() < page.tags.len()
-            {
-                return Ok(redirect_to(
-                    page.to_full_url(prefer_exact).as_str(),
-                ));
+            if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
+                return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
             }
             let body = tpl::render(
                 &tpl::view_tpl(),
@@ -89,20 +86,14 @@ fn def(
         MatchType::Many(page_ids) => {
             let mut pages: Vec<_> = page_ids
                 .iter()
-                .map(|page_id| {
-                    data.pages_by_id
-                        .get(&page_id)
-                        .unwrap()
-                        .clone()
-                })
+                .map(|page_id| data.pages_by_id.get(&page_id).unwrap().clone())
                 .collect();
             pages.sort_by(|n, m| n.title.cmp(&m.title));
             let body = tpl::render(
                 &tpl::index_tpl(),
                 &tpl::index::Data {
                     base: tpl::base::Data {
-                        title: if match_.matching_tags.is_empty()
-                        {
+                        title: if match_.matching_tags.is_empty() {
                             ::config::WIKI_NAME_TEXT.into()
                         } else {
                             match_.matching_tags.join("/")
@@ -117,9 +108,7 @@ fn def(
 
             Ok(HttpResponse::Ok().body(body))
         }
-        MatchType::None => {
-            Ok(HttpResponse::Ok().body(format!("Not Found :(")))
-        }
+        MatchType::None => Ok(HttpResponse::Ok().body(format!("Not Found :("))),
     }
 }
 
@@ -129,17 +118,43 @@ struct State {
     opts: Opts,
 }
 
+struct Logger;
+
+impl<S> Middleware<S> for Logger {
+    fn start(&self, req: &mut HttpRequest<S>) -> Result<Started> {
+        /*
+        if !self.exclude.contains(req.path()) {
+            req.extensions_mut().insert(StartTime(time::now()));
+        }
+        */
+        println!("{} {}", req.method(), req.path());
+        Ok(Started::Done)
+    }
+
+    fn finish(&self, req: &mut HttpRequest<S>, resp: &HttpResponse) -> Finished {
+        //self.log(req, resp);
+        Finished::Done
+    }
+}
+
 pub fn start(data: data::SyncState, opts: Opts) {
     let state = State {
         data: data,
         opts: opts.clone(),
     };
+
     server::new(move || {
         App::with_state(state.clone())
+            .middleware(Logger)
             //.route("/", http::Method::GET, index)
             .route("/~login", http::Method::GET, login)
             .handler("/~theme", fs::StaticFiles::new(opts.theme_dir.clone()))
-            .default_resource(|r| r.get().f(def))
+            .default_resource(|r| {
+
+                               r.get().f(get);
+                               r.post().f(post);
+                               r.put().f(put);
+            })
     }).bind("127.0.0.1:8080")
         .unwrap()
         .run();
