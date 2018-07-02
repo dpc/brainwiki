@@ -13,7 +13,7 @@ pub struct Page {
 }
 
 impl Page {
-    pub fn from_markdown(markdown: String, path: &Path) -> Result<Self> {
+    pub fn from_markdown(markdown: String) -> Self {
         let (tags, html, title) = markdown::parse_markdown(&markdown);
 
         let page = Page {
@@ -27,12 +27,12 @@ impl Page {
             tags: tags,
         };
 
-        Ok(page)
+        page
     }
     pub fn read_from_file(path: &Path) -> Result<Self> {
         let md = fs::read_to_string(path)?;
 
-        Self::from_markdown(md, path)
+        Ok(Self::from_markdown(md))
     }
 
     pub fn url(&self) -> String {

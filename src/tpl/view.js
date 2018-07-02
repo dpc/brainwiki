@@ -16,11 +16,11 @@ $("#save").click(function(){
       text: text
     }),
     success: function(data) {
-      alert(data);
-
-      $("#view_tab").show();
-      $("#edit_tab").hide();
-      editor.focus();
+      if (data.redirect) {
+        window.location = data.redirect;
+      } else {
+        window.location.reload(true);
+      }
     },
     error:function(data) {
       if (data.status == 409) {

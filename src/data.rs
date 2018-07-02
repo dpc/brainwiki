@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 use std::{sync, thread};
 
 use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
+use std::fs::File;
+use std::io::Write;
 use std::time::Duration;
 
 use Result;
@@ -14,8 +16,9 @@ pub type NarrowingTagsSet = HashMap<String, usize>;
 
 #[derive(Default)]
 pub struct State {
-    pub pages_by_id: HashMap<PageId, PageEntry>,
+    pub pages_by_id: HashMap<PageId, Page>,
     pub pages_by_path: HashMap<PathBuf, PageId>,
+    pub path_by_id: HashMap<PageId, PathBuf>,
     tag_sets: HashMap<String, HashSet<PageId>>,
     next_page_id: PageId,
     all_pages: HashSet<PageId>,
@@ -29,12 +32,8 @@ pub struct Match {
     pub narrowing_tags: NarrowingTagsSet,
 }
 
-pub struct PageEntry {
-    pub page: Page,
-    pub fs_path: PathBuf,
-}
-
 impl Match {
+    #[allow(unused)]
     fn is_none(&self) -> bool {
         self.type_ == MatchType::None
     }
@@ -46,6 +45,8 @@ impl Match {
             false
         }
     }
+
+    #[allow(unused)]
     fn is_many(&self) -> bool {
         if let MatchType::Many(_) = self.type_ {
             true
@@ -111,26 +112,22 @@ impl State {
                 .insert(page_id);
         }
         self.pages_by_path.insert(path.into(), page_id);
-        self.pages_by_id.insert(
-            page_id,
-            PageEntry {
-                page: page,
-                fs_path: path.into(),
-            },
-        );
+        self.path_by_id.insert(page_id, path.into());
+        self.pages_by_id.insert(page_id, page);
         page_id
     }
 
     fn remove(&mut self, page_id: PageId) {
         let page = self.pages_by_id.remove(&page_id).unwrap();
-        for tag in page.page.tags.iter() {
+        for tag in page.tags.iter() {
             self.tag_sets
                 .get_mut(&tag.clone())
                 .unwrap()
                 .remove(&page_id);
         }
         self.all_pages.remove(&page_id);
-        self.pages_by_path.remove(&page.fs_path).unwrap();
+        let path = self.path_by_id.remove(&page_id).unwrap();
+        self.pages_by_path.remove(&path).unwrap();
     }
 
     pub fn lookup(&self, tags: Vec<String>) -> Result<PageId> {
@@ -189,7 +186,7 @@ impl State {
         let mut narrowing_tags = HashMap::new();
 
         for page_id in &matches {
-            for tag in &self.pages_by_id.get(&page_id).unwrap().page.tags {
+            for tag in &self.pages_by_id.get(&page_id).unwrap().tags {
                 if !matching_tags.contains(&tag) {
                     *narrowing_tags.entry(tag.clone()).or_insert(0) += 1;
                 }
@@ -214,7 +211,6 @@ impl State {
                                 self.pages_by_id
                                     .get(&id)
                                     .unwrap()
-                                    .page
                                     .tags
                                     .iter()
                                     .all(|tag| tags.contains(&tag))
@@ -250,6 +246,18 @@ impl SyncState {
     }
     pub fn read<'a>(&'a self) -> sync::RwLockReadGuard<'a, State> {
         self.inner.read().unwrap()
+    }
+
+    pub fn replace_file(&self, path: &Path, page: &::page::Page) -> Result<()> {
+        // TODO: randomize
+        let tmp_file_path = path.with_extension(".tmp");
+        let mut tmp_file = File::create(tmp_file_path.clone())?;
+        tmp_file.write_all(page.md.as_bytes())?;
+        tmp_file.flush()?;
+        drop(tmp_file);
+        fs::rename(tmp_file_path, path)?;
+
+        Ok(())
     }
 
     fn handle_create(&self, path: PathBuf) -> Result<()> {
@@ -289,7 +297,8 @@ impl SyncState {
 }
 
 pub struct FsWatcher {
-    join_handle: thread::JoinHandle<Result<()>>,
+    // TODO
+    _join_handle: thread::JoinHandle<Result<()>>,
 }
 
 impl FsWatcher {
@@ -302,13 +311,14 @@ impl FsWatcher {
         let join_handle = thread::spawn(move || {
             let _watcher = watcher;
             loop {
-                // Intentionally ignore Fs errors and keep going
-                match rx.recv().unwrap() {
+                let event = rx.recv().unwrap();
+                println!("{:?}", event);
+                match event {
                     DebouncedEvent::Create(path) => {
                         let _ = state.handle_create(path)?;
                     }
                     DebouncedEvent::Remove(path) => {
-                        let _ = state.handle_create(path)?;
+                        let _ = state.handle_remove(path)?;
                     }
                     DebouncedEvent::Rename(src, dst) => {
                         state.handle_rename(src, dst)?;
@@ -318,7 +328,9 @@ impl FsWatcher {
             }
         });
 
-        Ok(FsWatcher { join_handle })
+        Ok(FsWatcher {
+            _join_handle: join_handle,
+        })
     }
 }
 

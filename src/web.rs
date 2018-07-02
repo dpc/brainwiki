@@ -23,13 +23,8 @@ use data::{self, MatchType, PageId};
 use opts::Opts;
 
 use futures::Future;
-use std::path::Path;
 
 use tpl;
-
-fn index(_: String) -> impl Responder {
-    format!("Hello world")
-}
 
 fn login(_: String) -> impl Responder {
     format!("Login - not implemented yet")
@@ -53,6 +48,11 @@ struct PutInput {
     text: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct PutResponse {
+    redirect: String,
+}
+
 fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
     let cur_url = req.path().to_owned();
     let data = req.state().data.clone();
@@ -67,7 +67,7 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
             let data_read = data.read();
             let page_id = data_read.lookup(url_tags)?;
 
-            let new_page = ::page::Page::from_markdown(input.text.clone(), Path::new("/"))?;
+            let new_page = ::page::Page::from_markdown(input.text.clone());
 
             let match_ = data_read.find_best_match(new_page.tags.clone(), true);
 
@@ -80,8 +80,15 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
                 }
                 MatchType::None => {}
             }
+            let existing_path = data_read.path_by_id.get(&page_id).unwrap().clone();
 
-            Ok(HttpResponse::Ok().json(()))
+            drop(data_read);
+
+            data.replace_file(&existing_path, &new_page)?;
+
+            Ok(HttpResponse::Ok().json(PutResponse {
+                redirect: new_page.to_full_url(true),
+            }))
         })
         .map_err(|e| {
             println!("2: {}", e);
@@ -98,7 +105,7 @@ fn get_index(
 ) -> Result<HttpResponse, error::Error> {
     let mut pages: Vec<_> = page_ids
         .iter()
-        .map(|page_id| data.pages_by_id.get(&page_id).unwrap().page.clone())
+        .map(|page_id| data.pages_by_id.get(&page_id).unwrap().clone())
         .collect();
     pages.sort_by(|n, m| n.title.cmp(&m.title));
     let body = tpl::render(
@@ -149,16 +156,16 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
     match match_.type_ {
         MatchType::One(page_id) => {
             let page = data.pages_by_id.get(&page_id).unwrap();
-            if match_.is_one() && match_.matching_tags.len() < page.page.tags.len() {
-                return Ok(redirect_to(page.page.to_full_url(prefer_exact).as_str()));
+            if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
+                return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
             }
             let body = tpl::render(
                 &tpl::view_tpl(),
                 &tpl::view::Data {
                     base: tpl::base::Data {
-                        title: page.page.title.clone(),
+                        title: page.title.clone(),
                     },
-                    page: page.page.clone(),
+                    page: page.clone(),
                     cur_url: cur_url.into(),
                     narrowing_tags: match_.narrowing_tags,
                 },
@@ -184,7 +191,7 @@ impl<S> Middleware<S> for Logger {
         Ok(Started::Done)
     }
 
-    fn finish(&self, req: &mut HttpRequest<S>, resp: &HttpResponse) -> Finished {
+    fn finish(&self, _req: &mut HttpRequest<S>, _resp: &HttpResponse) -> Finished {
         Finished::Done
     }
 }
