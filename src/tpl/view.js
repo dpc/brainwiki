@@ -9,11 +9,12 @@ $("#edit").click(function(){
 $("#save").click(function(){
   const text = editor.getValue();
   $.ajax({
+    contentType: 'application/json',
     type: 'PUT',
     url: window.location.href,
-    data: {
+    data: JSON.stringify({
       text: text
-    },
+    }),
     success: function(data) {
       alert(data);
 
@@ -24,6 +25,8 @@ $("#save").click(function(){
     error:function(data) {
       if (data.status == 409) {
         alert('Conflict. Try more tags.');
+      } else if (data.status == 404) {
+        alert('Not found.');
       } else {
         alert('Unknown error. Status: ' + data.status);
       }

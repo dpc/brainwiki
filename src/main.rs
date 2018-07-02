@@ -45,7 +45,7 @@ extern crate pulldown_cmark;
 extern crate regex;
 #[macro_use]
 extern crate structopt;
-//#[macro_use]
+#[macro_use]
 extern crate failure;
 extern crate serde;
 #[macro_use]
@@ -53,6 +53,10 @@ extern crate serde_derive;
 extern crate notify;
 extern crate serde_json;
 extern crate stpl;
+extern crate futures;
+extern crate bytes;
+#[macro_use]
+extern crate json;
 
 mod config;
 mod data;
@@ -76,6 +80,7 @@ fn main() {
     );
 
     state.write().insert_from_dir(&opts.data_dir).unwrap();
+
 
     web::start(state, opts);
 }

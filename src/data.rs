@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use Result;
 
-type PageId = u32;
+pub type PageId = u32;
 pub type NarrowingTagsSet = HashMap<String, usize>;
 
 #[derive(Default)]
@@ -63,7 +63,7 @@ impl Match {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MatchType {
     None,
     One(PageId),
@@ -120,6 +120,18 @@ impl State {
         }
         self.all_pages.remove(&page_id);
         self.pages_by_path.remove(&page.fs_path).unwrap();
+    }
+
+    pub fn lookup(&self, tags: Vec<String>) -> Result<PageId> {
+        match self.find_best_match(tags, true).type_ {
+            MatchType::Many(_) => {
+                bail!("Multiple pages matching");
+            }
+            MatchType::One(id) => Ok(id),
+            MatchType::None => {
+                bail!("Not found");
+            }
+        }
     }
 
     pub fn find_best_match(&self, tags: Vec<String>, prefer_exact: bool) -> Match {
@@ -302,58 +314,62 @@ impl FsWatcher {
 fn simple() {
     let mut state: State = Default::default();
 
-    assert!(state.find_best_match(vec![]).is_none());
+    assert!(state.find_best_match(vec![], false).is_none());
 
     let p1 = state.insert(Page {
         html: "".into(),
-        path: "".into(),
+        fs_path: "".into(),
         tags: vec!["a".into(), "b".into()],
+        title: "".into(),
+        md: "".into(),
     });
 
     let p2 = state.insert(Page {
         html: "".into(),
-        path: "".into(),
+        fs_path: "".into(),
         tags: vec!["a".into(), "c".into()],
+        title: "".into(),
+        md: "".into(),
     });
 
     let empty: Vec<String> = vec![];
-    let m = state.find_best_match(empty.clone());
+    let m = state.find_best_match(empty.clone(), false);
     assert!(m.is_many());
     assert_eq!(m.matching_tags, empty);
     assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["x".into()];
-    let m = state.find_best_match(tags.clone());
+    let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_many());
     assert_eq!(m.matching_tags, empty);
     assert_eq!(m.unmatched_tags, tags);
 
     let tags = vec!["a".into()];
-    let m = state.find_best_match(tags.clone());
+    let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_many());
     assert_eq!(m.matching_tags, tags);
     assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".into(), "x".into()];
-    let m = state.find_best_match(tags.clone());
+    let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_many());
     assert_eq!(m.matching_tags, vec!["a".to_string()]);
     assert_eq!(m.unmatched_tags, vec!["x".to_string()]);
 
     let tags = vec!["a".into(), "b".into()];
-    let m = state.find_best_match(tags.clone());
+    let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_one());
     assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
     assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".into(), "b".into()];
-    let m = state.find_best_match(tags.clone());
+    let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_one());
     assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
     assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".to_string(), "x".into(), "b".into()];
-    let m = state.find_best_match(tags.clone());
+    let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_one());
     assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
     assert_eq!(m.unmatched_tags, vec!["x".to_string()]);
