@@ -57,12 +57,12 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
     let cur_url = req.path().to_owned();
     let data = req.state().data.clone();
     req.json()
-        .map_err(|e|{
-                 println!("{}", e);
-                 e})
-        .from_err()  // convert all errors into `Error`
+        .map_err(|e| {
+            println!("{}", e);
+            e
+        })
+        .from_err()
         .and_then(move |input: PutInput| {
-
             let (url_tags, _) = url_to_tags(cur_url.as_str());
             let data_read = data.read();
             let page_id = data_read.lookup(url_tags)?;
@@ -72,12 +72,10 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
             let match_ = data_read.find_best_match(new_page.tags.clone(), true);
 
             match match_.type_ {
-                MatchType::Many(_) => {
-                    return Ok(HttpResponse::Conflict().body("{}"))
-                },
+                MatchType::Many(_) => return Ok(HttpResponse::Conflict().body("{}")),
                 MatchType::One(id) => {
                     if id != page_id {
-                        return Ok(HttpResponse::Conflict().body("{}"))
+                        return Ok(HttpResponse::Conflict().body("{}"));
                     }
                 }
                 MatchType::None => {}
@@ -85,10 +83,11 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
 
             Ok(HttpResponse::Ok().json(()))
         })
-        .map_err(|e|{
-                 println!("2: {}", e);
-                 e})
-    .responder()
+        .map_err(|e| {
+            println!("2: {}", e);
+            e
+        })
+        .responder()
 }
 
 fn get_index(
@@ -99,7 +98,7 @@ fn get_index(
 ) -> Result<HttpResponse, error::Error> {
     let mut pages: Vec<_> = page_ids
         .iter()
-        .map(|page_id| data.pages_by_id.get(&page_id).unwrap().clone())
+        .map(|page_id| data.pages_by_id.get(&page_id).unwrap().page.clone())
         .collect();
     pages.sort_by(|n, m| n.title.cmp(&m.title));
     let body = tpl::render(
@@ -150,16 +149,16 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
     match match_.type_ {
         MatchType::One(page_id) => {
             let page = data.pages_by_id.get(&page_id).unwrap();
-            if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
-                return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
+            if match_.is_one() && match_.matching_tags.len() < page.page.tags.len() {
+                return Ok(redirect_to(page.page.to_full_url(prefer_exact).as_str()));
             }
             let body = tpl::render(
                 &tpl::view_tpl(),
                 &tpl::view::Data {
                     base: tpl::base::Data {
-                        title: page.title.clone(),
+                        title: page.page.title.clone(),
                     },
-                    page: page.clone(),
+                    page: page.page.clone(),
                     cur_url: cur_url.into(),
                     narrowing_tags: match_.narrowing_tags,
                 },

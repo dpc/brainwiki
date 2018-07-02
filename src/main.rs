@@ -55,8 +55,8 @@ extern crate serde_json;
 extern crate stpl;
 extern crate futures;
 extern crate bytes;
-#[macro_use]
-extern crate json;
+//#[macro_use]
+//extern crate json;
 
 mod config;
 mod data;

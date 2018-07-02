@@ -1,6 +1,6 @@
 use markdown;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use Result;
 
@@ -9,7 +9,6 @@ pub struct Page {
     pub title: String,
     pub html: String,
     pub md: String,
-    pub fs_path: PathBuf,
     pub tags: Vec<String>,
 }
 
@@ -18,7 +17,6 @@ impl Page {
         let (tags, html, title) = markdown::parse_markdown(&markdown);
 
         let page = Page {
-            fs_path: path.canonicalize()?,
             html: html,
             md: markdown,
             title: if title.is_empty() {

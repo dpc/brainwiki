@@ -14,7 +14,7 @@ pub type NarrowingTagsSet = HashMap<String, usize>;
 
 #[derive(Default)]
 pub struct State {
-    pub pages_by_id: HashMap<PageId, Page>,
+    pub pages_by_id: HashMap<PageId, PageEntry>,
     pub pages_by_path: HashMap<PathBuf, PageId>,
     tag_sets: HashMap<String, HashSet<PageId>>,
     next_page_id: PageId,
@@ -27,6 +27,11 @@ pub struct Match {
     pub matching_tags: Vec<String>,
     pub unmatched_tags: Vec<String>,
     pub narrowing_tags: NarrowingTagsSet,
+}
+
+pub struct PageEntry {
+    pub page: Page,
+    pub fs_path: PathBuf,
 }
 
 impl Match {
@@ -89,12 +94,12 @@ impl State {
     pub fn insert_from_file(&mut self, md_path: &Path) -> ::Result<()> {
         let page = Page::read_from_file(md_path)?;
 
-        self.insert(page);
+        self.insert(page, &md_path.canonicalize()?);
         Ok(())
     }
 
-    fn insert(&mut self, page: Page) -> PageId {
-        debug_assert_eq!(page.fs_path, page.fs_path.canonicalize().unwrap());
+    fn insert(&mut self, page: Page, path: &Path) -> PageId {
+        debug_assert_eq!(path, path.canonicalize().unwrap());
         let page_id = self.next_page_id;
         self.next_page_id += 1;
         self.all_pages.insert(page_id);
@@ -105,14 +110,20 @@ impl State {
                 .or_insert(Default::default())
                 .insert(page_id);
         }
-        self.pages_by_path.insert(page.fs_path.clone(), page_id);
-        self.pages_by_id.insert(page_id, page);
+        self.pages_by_path.insert(path.into(), page_id);
+        self.pages_by_id.insert(
+            page_id,
+            PageEntry {
+                page: page,
+                fs_path: path.into(),
+            },
+        );
         page_id
     }
 
     fn remove(&mut self, page_id: PageId) {
         let page = self.pages_by_id.remove(&page_id).unwrap();
-        for tag in page.tags.iter() {
+        for tag in page.page.tags.iter() {
             self.tag_sets
                 .get_mut(&tag.clone())
                 .unwrap()
@@ -178,7 +189,7 @@ impl State {
         let mut narrowing_tags = HashMap::new();
 
         for page_id in &matches {
-            for tag in &self.pages_by_id.get(&page_id).unwrap().tags {
+            for tag in &self.pages_by_id.get(&page_id).unwrap().page.tags {
                 if !matching_tags.contains(&tag) {
                     *narrowing_tags.entry(tag.clone()).or_insert(0) += 1;
                 }
@@ -203,6 +214,7 @@ impl State {
                                 self.pages_by_id
                                     .get(&id)
                                     .unwrap()
+                                    .page
                                     .tags
                                     .iter()
                                     .all(|tag| tags.contains(&tag))
@@ -247,7 +259,7 @@ impl SyncState {
         if let Some(id) = inner.pages_by_path.get(path.as_path()).cloned() {
             inner.remove(id);
         }
-        inner.insert(new_page);
+        inner.insert(new_page, &path.canonicalize()?);
 
         Ok(())
     }
@@ -270,7 +282,7 @@ impl SyncState {
         if let Some(id) = inner.pages_by_path.get(src.as_path()).cloned() {
             inner.remove(id);
         }
-        inner.insert(new_page);
+        inner.insert(new_page, &dst.canonicalize()?);
 
         Ok(())
     }
@@ -316,21 +328,25 @@ fn simple() {
 
     assert!(state.find_best_match(vec![], false).is_none());
 
-    let p1 = state.insert(Page {
-        html: "".into(),
-        fs_path: "".into(),
-        tags: vec!["a".into(), "b".into()],
-        title: "".into(),
-        md: "".into(),
-    });
+    let p1 = state.insert(
+        Page {
+            html: "".into(),
+            tags: vec!["a".into(), "b".into()],
+            title: "".into(),
+            md: "".into(),
+        },
+        "".into(),
+    );
 
-    let p2 = state.insert(Page {
-        html: "".into(),
-        fs_path: "".into(),
-        tags: vec!["a".into(), "c".into()],
-        title: "".into(),
-        md: "".into(),
-    });
+    let p2 = state.insert(
+        Page {
+            html: "".into(),
+            tags: vec!["a".into(), "c".into()],
+            title: "".into(),
+            md: "".into(),
+        },
+        "".into(),
+    );
 
     let empty: Vec<String> = vec![];
     let m = state.find_best_match(empty.clone(), false);
