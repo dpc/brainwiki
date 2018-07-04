@@ -11,9 +11,32 @@ pub struct Flash {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Data {
     pub title: String,
+    pub search_query: Option<String>,
 }
 
-pub fn navbar(_data: &Data) -> impl Render {
+pub fn search_form(data: &Data) -> impl Render {
+    form.class("form-inline mx-1")
+        .role("search")
+        .action("/~search")
+        .method("get")(div.class("input-group")((
+        {
+            let this_input = input
+                .class("form-control")
+                .placeholder("Query...")
+                .attr("type", "text")
+                .name("q");
+
+            if let Some(q) = data.search_query.clone() {
+                this_input.value(q)
+            } else {
+                this_input
+            }
+        },
+        span.class("input-group-btn")(button.type_("submit").class("btn btn-info")(("Search",))),
+    )))
+}
+
+pub fn navbar(data: &Data, buttons: Box<dyn Render>) -> impl Render {
     (nav.id("main-navbar").class(
         "navbar navbar-expand-sm navbar-dark bg-primary fixed-top",
     )((div.class("container")((
@@ -25,55 +48,46 @@ pub fn navbar(_data: &Data) -> impl Render {
             .data_target("#navbar-collapse")
             .aria_controls("navbar-collapse")
             .aria_expanded("false")
-            .aria_label("Toggle navigation")(
-            span.class("navbar-toggler-icon"),
-        ),
+            .aria_label("Toggle navigation")(span.class("navbar-toggler-icon")),
         div.id("navbar-collapse")
             .class("collapse navbar-collapse show")((
-            ul.class("navbar-nav")((li.class("nav-item dropdown")(
-                if false {
-                    Some((
-                        a.id("dropdown-top")
-                            .class("nav-link dropdown-toggle mr-auto")
-                            .href("/")
-                            .data_toggle("dropdown")
-                            .aria_haspopup("true")
-                            .aria_expanded("false")(
-                            "Top"
-                        ),
-                        div.class("dropdown-menu")
-                            .aria_labelledby("dropdown01")(
-                            (
-                            a.class("dropdown-item").href("/")("Home"),
-                        )
-                        ),
-                    ))
-                } else {
-                    None
-                },
-            ),)),
-            //session_menu(data),
+            ul.class("navbar-nav mr-auto")((li.class("nav-item dropdown")(if false {
+                Some((
+                    a.id("dropdown-top")
+                        .class("nav-link dropdown-toggle mr-auto")
+                        .href("/")
+                        .data_toggle("dropdown")
+                        .aria_haspopup("true")
+                        .aria_expanded("false")("Top"),
+                    div.class("dropdown-menu").aria_labelledby("dropdown01")((a
+                        .class("dropdown-item")
+                        .href("/")(
+                        "Home"
+                    ),)),
+                ))
+            } else {
+                None
+            }),)),
+            buttons,
+            search_form(data),
         )),
     )),)),)
 }
 
 pub fn my_footer() -> impl Render {
-    footer.id("footer").class("container py-1 my-1")((row(div
-        .class("col text-center mx-1 px-4")(
+    footer.id("footer").class("container py-1 my-1")((row(div.class("col text-center mx-1 px-4")(
         span(::config::FOOTER_TEXT),
     )),))
 }
 
-pub fn base(
-    data: &Data,
-    content: Box<Render + 'static>,
-) -> impl Render {
-    base_with_js(data, content, Box::new(()))
+pub fn base(data: &Data, content: Box<dyn Render>, buttons: Box<dyn Render>) -> impl Render {
+    base_with_js(data, content, buttons, Box::new(()))
 }
 
 pub fn base_with_js(
     data: &Data,
-    content: Box<Render + 'static>,
+    content: Box<dyn Render>,
+    buttons: Box<dyn Render>,
     js: Box<Render + 'static>,
 ) -> impl Render {
     let (flash_body, flash_js) = flash(data);
@@ -96,7 +110,7 @@ pub fn base_with_js(
             )),
             body(wrapper.class("d-flex flex-column")((
                 flash_body,
-                navbar(data),
+                navbar(data, buttons),
                 main
                     .id("main")
                     .role("main")

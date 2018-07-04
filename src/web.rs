@@ -117,6 +117,7 @@ fn get_index(
                 } else {
                     match_.matching_tags.join("/")
                 },
+                search_query: None,
             },
             pages: pages,
             cur_url: cur_url.into(),
@@ -141,7 +142,22 @@ fn url_to_tags(url: &str) -> (Vec<String>, bool) {
     (tags, prefer_exact)
 }
 
-//    Ok(HttpResponse::c().body("{}"))
+fn new_page(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+    let cur_url = req.path();
+
+    let body = tpl::render(
+        &tpl::new_tpl(),
+        &tpl::new::Data {
+            base: tpl::base::Data {
+                title: "New post".into(),
+                search_query: None,
+            },
+            cur_url: cur_url.into(),
+        },
+    );
+    Ok(HttpResponse::Ok().body(body))
+}
+
 fn get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
     let cur_url = req.path();
     let (tags, prefer_exact) = url_to_tags(cur_url);
@@ -164,6 +180,7 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
                 &tpl::view::Data {
                     base: tpl::base::Data {
                         title: page.title.clone(),
+                        search_query: None,
                     },
                     page: page.clone(),
                     cur_url: cur_url.into(),
@@ -207,6 +224,7 @@ pub fn start(data: data::SyncState, opts: Opts) {
             .middleware(Logger)
             //.route("/", http::Method::GET, index)
             .route("/~login", http::Method::GET, login)
+            .route("/~new", http::Method::GET, new_page)
             .handler("/~theme", fs::StaticFiles::new(opts.theme_dir.clone()))
             .default_resource(|r| {
 

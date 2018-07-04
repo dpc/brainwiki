@@ -2,7 +2,10 @@ var editor;
 
 $("#edit").click(function(){
   $("#view_tab").hide();
+  $("#edit").hide();
+  $("#new").hide();
   $("#edit_tab").show();
+  $("#save").show();
   editor.focus();
 });
 

@@ -1,4 +1,4 @@
-use stpl::html::{button, div, raw, script};
+use stpl::html::{a, button, div, raw, script};
 use stpl::Render;
 
 use super::misc::*;
@@ -22,14 +22,12 @@ pub fn page(data: &Data) -> impl Render {
                 misc::broadening_tags_col(&data.cur_url, data.page.tags.clone()),
             )),
             col((
-                div.id("view_tab")((
-                    data.page.html.clone(),
-                    button.id("edit").type_("button").class("btn btn-primary")("Edit"),
-                )),
-                div.id("edit_tab").attr("style", "display: none;")((
-                    div.id("editor").class("my-2")(data.page.md.clone()),
-                    button.id("save").type_("button").class("btn btn-primary")("Save"),
-                )),
+                div.id("view_tab")((data.page.html.clone(),)),
+                div.id("edit_tab").attr("style", "display: none;")((div
+                    .id("editor")
+                    .class("my-2")(
+                    data.page.md.clone()
+                ),)),
             )),
         )),
     );
@@ -44,6 +42,16 @@ pub fn page(data: &Data) -> impl Render {
             .charset("utf-8")
     }
 
+    let buttons = (
+        a.id("new").class("btn btn-info mx-1").href("/~new")("New"),
+        button.id("edit").type_("submit").class("btn btn-info mx-1")("Edit"),
+        button
+            .id("save")
+            .attr("style", "display: none;")
+            .type_("submit")
+            .class("btn btn-info mx-1")("Save"),
+    );
+
     let js = (
         ace_script("ace.js"),
         ace_script("keybinding-vim.js"),
@@ -51,6 +59,11 @@ pub fn page(data: &Data) -> impl Render {
         script.type_("text/javascript")(raw(VIEW_JS)),
     );
 
-    base::base_with_js(&data.base, Box::new(content), Box::new(js))
+    base::base_with_js(
+        &data.base,
+        Box::new(content),
+        Box::new(buttons),
+        Box::new(js),
+    )
 }
 const VIEW_JS: &str = include_str!("view.js");

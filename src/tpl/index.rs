@@ -28,15 +28,11 @@ pub fn page(data: &Data) -> impl Render {
                 ul(data
                     .pages
                     .iter()
-                    .map(|page| {
-                        li(a.href(page.url())(
-                            page.title.clone(),
-                        ))
-                    })
+                    .map(|page| li(a.href(page.url())(page.title.clone())))
                     .collect::<Vec<_>>()),
             )),
         )),
     );
 
-    base::base(&data.base, Box::new(content))
+    base::base(&data.base, Box::new(content), Box::new(()))
 }
