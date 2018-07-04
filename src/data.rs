@@ -76,6 +76,13 @@ pub enum MatchType {
     Many(Vec<PageId>),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum LookupOutcome {
+    None,
+    One(PageId),
+    Many,
+}
+
 impl State {
     pub fn new() -> Self {
         Default::default()
@@ -139,6 +146,34 @@ impl State {
             MatchType::None => {
                 bail!("Not found");
             }
+        }
+    }
+
+    pub fn lookup_exact(&self, tags: Vec<String>) -> LookupOutcome {
+        let mut matches: Option<HashSet<PageId>> = None;
+        for tag in tags.iter().cloned() {
+            if let Some(set) = self.tag_sets.get(&tag) {
+                let new_matches: HashSet<PageId> = matches
+                    .as_ref()
+                    .unwrap_or(&self.all_pages)
+                    .intersection(set)
+                    .into_iter()
+                    .cloned()
+                    .collect();
+
+                if new_matches.is_empty() {
+                    return LookupOutcome::None;
+                }
+                matches = Some(new_matches);
+            } else {
+                return LookupOutcome::None;
+            }
+        }
+        let matches = matches.as_ref().unwrap_or(&self.all_pages);
+        match matches.len() {
+            0 => LookupOutcome::None,
+            1 => LookupOutcome::One(*matches.into_iter().next().unwrap()),
+            _ => LookupOutcome::Many,
         }
     }
 
@@ -248,6 +283,37 @@ impl SyncState {
         self.inner.read().unwrap()
     }
 
+    pub fn write_new_file(&self, page: &::page::Page, data_dir: &Path) -> Result<()> {
+        let mut path_text = page.suggested_filename();
+
+        println!("{}", path_text);
+        let (mut tmp_file, tmp_file_path, dst_path) = loop {
+            let dst_path = data_dir.join(path_text.clone()).with_extension("md");
+            if dst_path.exists() {
+                path_text += "_";
+                continue;
+            }
+            // TODO: randomize
+            let tmp_file_path = dst_path.with_extension("tmp");
+            let res = File::create(tmp_file_path.clone());
+            match res {
+                Err(e) => if e.kind() == ::std::io::ErrorKind::AlreadyExists {
+                    path_text += "_";
+                } else {
+                    Err(e)?;
+                },
+                Ok(file) => break (file, tmp_file_path, dst_path),
+            }
+        };
+        tmp_file.write_all(page.md.as_bytes())?;
+        tmp_file.flush()?;
+        drop(tmp_file);
+        fs::rename(tmp_file_path, dst_path.clone())?;
+        let _ = self.handle_create(dst_path)?;
+
+        Ok(())
+    }
+
     pub fn replace_file(&self, path: &Path, page: &::page::Page) -> Result<()> {
         // TODO: randomize
         let tmp_file_path = path.with_extension(".tmp");
@@ -255,8 +321,9 @@ impl SyncState {
         tmp_file.write_all(page.md.as_bytes())?;
         tmp_file.flush()?;
         drop(tmp_file);
-        fs::rename(tmp_file_path, path)?;
+        fs::rename(tmp_file_path.clone(), path)?;
 
+        let _ = self.handle_rename(tmp_file_path, path.into())?;
         Ok(())
     }
 
@@ -304,7 +371,7 @@ pub struct FsWatcher {
 impl FsWatcher {
     pub fn new(dir: PathBuf, state: SyncState) -> ::Result<Self> {
         let (tx, rx) = sync::mpsc::channel();
-        let mut watcher: RecommendedWatcher = Watcher::new(tx, Duration::from_secs(1))?;
+        let mut watcher: RecommendedWatcher = Watcher::new(tx, Duration::from_millis(10))?;
 
         watcher.watch(dir, RecursiveMode::Recursive)?;
 
@@ -315,13 +382,19 @@ impl FsWatcher {
                 println!("{:?}", event);
                 match event {
                     DebouncedEvent::Create(path) => {
-                        let _ = state.handle_create(path)?;
+                        if path.extension().and_then(|e| e.to_str()) == Some("md") {
+                            let _ = state.handle_create(path)?;
+                        }
                     }
                     DebouncedEvent::Remove(path) => {
-                        let _ = state.handle_remove(path)?;
+                        if path.extension().and_then(|e| e.to_str()) == Some("md") {
+                            let _ = state.handle_remove(path)?;
+                        }
                     }
                     DebouncedEvent::Rename(src, dst) => {
-                        state.handle_rename(src, dst)?;
+                        if dst.extension().and_then(|e| e.to_str()) == Some("md") {
+                            state.handle_rename(src, dst)?;
+                        }
                     }
                     _ => {}
                 }

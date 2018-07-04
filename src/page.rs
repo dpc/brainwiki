@@ -47,4 +47,22 @@ impl Page {
 
         location
     }
+
+    pub fn suggested_filename(&self) -> String {
+        let mut in_break = true;
+        let mut filename = String::new();
+
+        for ch in self.title.chars() {
+            if ch.is_alphanumeric() {
+                filename.push_str(ch.to_lowercase().to_string().as_str());
+                in_break = false;
+            } else {
+                if !in_break {
+                    in_break = true;
+                    filename.push('_');
+                }
+            }
+        }
+        filename
+    }
 }

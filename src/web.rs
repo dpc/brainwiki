@@ -36,11 +36,48 @@ fn redirect_to(location: &str) -> HttpResponse {
         .finish()
 }
 
-fn post(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
-    let cur_url = req.path();
-    let (_tags, _prefer_exact) = url_to_tags(cur_url);
-    println!("WOOFHOO");
-    Ok(HttpResponse::Ok().body("{}"))
+#[derive(Debug, Serialize, Deserialize)]
+struct PostInput {
+    text: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct PostResponse {
+    redirect: String,
+}
+
+fn post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+    let data = req.state().data.clone();
+    let data_dir = req.state().opts.data_dir.clone();
+    req.json()
+        .map_err(|e| {
+            println!("{}", e);
+            e
+        })
+        .from_err()
+        .and_then(move |input: PostInput| {
+            let data_read = data.read();
+
+            let new_page = ::page::Page::from_markdown(input.text.clone());
+
+            let lookup = data_read.lookup_exact(new_page.tags.clone());
+
+            if lookup != data::LookupOutcome::None {
+                return Ok(HttpResponse::Conflict().body("{}"));
+            }
+
+            drop(data_read);
+
+            data.write_new_file(&new_page, data_dir.as_path())?;
+            Ok(HttpResponse::Ok().json(PostResponse {
+                redirect: new_page.to_full_url(true),
+            }))
+        })
+        .map_err(|e| {
+            println!("2: {}", e);
+            e
+        })
+        .responder()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,17 +106,16 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
 
             let new_page = ::page::Page::from_markdown(input.text.clone());
 
-            let match_ = data_read.find_best_match(new_page.tags.clone(), true);
+            let lookup = data_read.lookup_exact(new_page.tags.clone());
 
-            match match_.type_ {
-                MatchType::Many(_) => return Ok(HttpResponse::Conflict().body("{}")),
-                MatchType::One(id) => {
-                    if id != page_id {
-                        return Ok(HttpResponse::Conflict().body("{}"));
-                    }
+            if lookup == data::LookupOutcome::Many {
+                return Ok(HttpResponse::Conflict().body("{}"));
+            } else if let data::LookupOutcome::One(id) = lookup {
+                if id != page_id {
+                    return Ok(HttpResponse::Conflict().body("{}"));
                 }
-                MatchType::None => {}
             }
+
             let existing_path = data_read.path_by_id.get(&page_id).unwrap().clone();
 
             drop(data_read);

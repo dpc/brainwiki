@@ -34,5 +34,6 @@ pub fn page(data: &Data) -> impl Render {
         )),
     );
 
-    base::base(&data.base, Box::new(content), Box::new(()))
+    let buttons = (a.id("new").class("btn btn-info mx-1").href("/~new")("New"),);
+    base::base(&data.base, Box::new(content), Box::new(buttons))
 }
