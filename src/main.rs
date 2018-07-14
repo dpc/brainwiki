@@ -36,6 +36,7 @@
 //!
 //! Clone, `cargo build`. Run the binary with `--data <dir-with-md-files>`
 
+#![feature(rust_2018_preview)]
 #![feature(nll)]
 
 #[macro_use]
