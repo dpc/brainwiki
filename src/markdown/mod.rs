@@ -81,7 +81,7 @@ pub fn parse_markdown(markdown_text: &str) -> (Vec<Tag>, RenderedHtml, Title) {
 
 #[test]
 fn simple() {
-    let (tags, _rendered) = parse_markdown(
+    let (tags, _rendered, _title) = parse_markdown(
         r#"
 Foo bar #X.
 #foo
@@ -98,7 +98,7 @@ Foo bar #X.
 
 #[test]
 fn skip_code() {
-    let (tags, rendered) = parse_markdown(
+    let (tags, _rendered, _title) = parse_markdown(
         r#"
 Foo bar #X.
 

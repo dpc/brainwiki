@@ -22,6 +22,7 @@ serde = "*"
 serde_derive = "*"
 serde_json = "*"
 structopt = "*"
+derive_more = "*"
 
 [dependencies.stpl]
 git = "http://github.com/dpc/stpl"

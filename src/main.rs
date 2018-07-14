@@ -56,6 +56,8 @@ extern crate serde_json;
 extern crate stpl;
 extern crate futures;
 extern crate bytes;
+#[macro_use]
+extern crate derive_more;
 //#[macro_use]
 //extern crate json;
 

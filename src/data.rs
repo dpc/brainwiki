@@ -11,7 +11,8 @@ use std::time::Duration;
 
 use Result;
 
-pub type PageId = u32;
+#[derive(From, Into, Eq, PartialEq, Hash, Default, Debug, Clone, Copy, AddAssign)]
+pub struct PageId(u32);
 pub type NarrowingTagsSet = HashMap<String, usize>;
 
 #[derive(Default)]
@@ -102,14 +103,14 @@ impl State {
     pub fn insert_from_file(&mut self, md_path: &Path) -> ::Result<()> {
         let page = Page::read_from_file(md_path)?;
 
+        debug_assert_eq!(md_path, md_path.canonicalize().unwrap());
         self.insert(page, &md_path.canonicalize()?);
         Ok(())
     }
 
     fn insert(&mut self, page: Page, path: &Path) -> PageId {
-        debug_assert_eq!(path, path.canonicalize().unwrap());
         let page_id = self.next_page_id;
-        self.next_page_id += 1;
+        self.next_page_id += 1.into();
         self.all_pages.insert(page_id);
 
         for tag in page.tags.iter() {
@@ -413,24 +414,24 @@ fn simple() {
 
     assert!(state.find_best_match(vec![], false).is_none());
 
-    let p1 = state.insert(
+    let _p1 = state.insert(
         Page {
             html: "".into(),
             tags: vec!["a".into(), "b".into()],
             title: "".into(),
             md: "".into(),
         },
-        "".into(),
+        Path::new(""),
     );
 
-    let p2 = state.insert(
+    let _p2 = state.insert(
         Page {
             html: "".into(),
             tags: vec!["a".into(), "c".into()],
             title: "".into(),
             md: "".into(),
         },
-        "".into(),
+        Path::new(""),
     );
 
     let empty: Vec<String> = vec![];
