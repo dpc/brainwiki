@@ -2,6 +2,8 @@ use super::base::Data;
 use stpl::html::*;
 use stpl::Render;
 
+use crate::data;
+
 pub fn flash(_data: &Data) -> (impl Render, impl Render) {
     (
         /*
@@ -35,7 +37,7 @@ pub fn breadcrumb(mut names: Vec<BreadCrumbItem>) -> impl Render {
     ))
 }
 
-pub fn narrowing_tags_col(cur_url: &str, narrowing_tags: &::data::NarrowingTagsSet) -> impl Render {
+pub fn narrowing_tags_col(cur_url: &str, narrowing_tags: &data::NarrowingTagsSet) -> impl Render {
     if !narrowing_tags.is_empty() {
         let mut list: Vec<(_, _)> = narrowing_tags.iter().collect();
         list.sort_by(|n, m| n.0.cmp(m.0));

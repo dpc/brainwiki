@@ -2,6 +2,8 @@ use super::misc::*;
 use stpl::html::*;
 use stpl::Render;
 
+use crate::config;
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Flash {
     pub is_error: bool,
@@ -40,7 +42,7 @@ pub fn navbar(data: &Data, buttons: Box<dyn Render>) -> impl Render {
     (nav.id("main-navbar").class(
         "navbar navbar-expand-sm navbar-dark bg-primary fixed-top",
     )((div.class("container")((
-        a.class("navbar-brand").href("/")(::config::WIKI_NAME_TEXT),
+        a.class("navbar-brand").href("/")(config::WIKI_NAME_TEXT),
         button
             .class("navbar-toggler")
             .attr("type", "button")
@@ -76,7 +78,7 @@ pub fn navbar(data: &Data, buttons: Box<dyn Render>) -> impl Render {
 
 pub fn my_footer() -> impl Render {
     footer.id("footer").class("container py-1 my-1")((row(div.class("col text-center mx-1 px-4")(
-        span(::config::FOOTER_TEXT),
+        span(config::FOOTER_TEXT),
     )),))
 }
 
@@ -99,7 +101,7 @@ pub fn base_with_js(
                 meta.charset("utf-8"),
                 meta.name("viewport").content("width=device-width, initial-scale=1, shrink-to-fit=no"),
                 meta.name("description").content(""),
-                meta.name("author").content(::config::AUTHOR),
+                meta.name("author").content(config::AUTHOR),
                 title(data.title.clone()),
 
                 (

@@ -1,4 +1,3 @@
-use page::Page;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,7 +8,8 @@ use std::fs::File;
 use std::io::Write;
 use std::time::Duration;
 
-use Result;
+use crate::page::Page;
+use crate::Result;
 
 #[derive(From, Into, Eq, PartialEq, Hash, Default, Debug, Clone, Copy, AddAssign)]
 pub struct PageId(u32);
@@ -100,7 +100,7 @@ impl State {
         Ok(())
     }
 
-    pub fn insert_from_file(&mut self, md_path: &Path) -> ::Result<()> {
+    pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
         let page = Page::read_from_file(md_path)?;
 
         debug_assert_eq!(md_path, md_path.canonicalize().unwrap());
@@ -284,7 +284,7 @@ impl SyncState {
         self.inner.read().unwrap()
     }
 
-    pub fn write_new_file(&self, page: &::page::Page, data_dir: &Path) -> Result<()> {
+    pub fn write_new_file(&self, page: &Page, data_dir: &Path) -> Result<()> {
         let mut path_text = page.suggested_filename();
 
         println!("{}", path_text);
@@ -315,7 +315,7 @@ impl SyncState {
         Ok(())
     }
 
-    pub fn replace_file(&self, path: &Path, page: &::page::Page) -> Result<()> {
+    pub fn replace_file(&self, path: &Path, page: &Page) -> Result<()> {
         // TODO: randomize
         let tmp_file_path = path.with_extension(".tmp");
         let mut tmp_file = File::create(tmp_file_path.clone())?;
@@ -370,7 +370,7 @@ pub struct FsWatcher {
 }
 
 impl FsWatcher {
-    pub fn new(dir: PathBuf, state: SyncState) -> ::Result<Self> {
+    pub fn new(dir: PathBuf, state: SyncState) -> Result<Self> {
         let (tx, rx) = sync::mpsc::channel();
         let mut watcher: RecommendedWatcher = Watcher::new(tx, Duration::from_millis(10))?;
 

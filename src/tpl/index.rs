@@ -4,14 +4,15 @@ use stpl::Render;
 use super::misc::*;
 use super::{base, misc};
 
-use page::Page;
+use crate::data;
+use crate::page::Page;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Data {
     pub base: base::Data,
     pub cur_url: String,
     pub pages: Vec<Page>,
-    pub narrowing_tags: ::data::NarrowingTagsSet,
+    pub narrowing_tags: data::NarrowingTagsSet,
     pub matching_tags: Vec<String>,
 }
 

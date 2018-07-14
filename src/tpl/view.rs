@@ -3,14 +3,14 @@ use stpl::Render;
 
 use super::misc::*;
 use super::{base, misc};
-use page::Page;
+use crate::{data, page::Page};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Data {
     pub base: base::Data,
     pub page: Page,
     pub cur_url: String,
-    pub narrowing_tags: ::data::NarrowingTagsSet,
+    pub narrowing_tags: data::NarrowingTagsSet,
 }
 
 pub fn page(data: &Data) -> impl Render {

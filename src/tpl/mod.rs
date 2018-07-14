@@ -14,10 +14,10 @@ use stpl::Template;
 macro_rules! def_tpl {
     ($name:ident, $key:ident) => {
         pub fn $name(
-        ) -> impl Template<Argument = ::tpl::$key::Data> {
+        ) -> impl Template<Argument = crate::tpl::$key::Data> {
             html::Template::new(
                 stringify!($key),
-                ::tpl::$key::page,
+                crate::tpl::$key::page,
             )
         }
     };

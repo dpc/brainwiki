@@ -14,17 +14,21 @@
 // POST /~login login
 // ANY /~... other special stuff
 
-use actix_web::http;
-use actix_web::middleware::{Finished, Middleware, Started};
-use actix_web::{error, fs, server, App, HttpRequest, HttpResponse, Responder, Result};
-use actix_web::{AsyncResponder, HttpMessage};
-
-use data::{self, MatchType, PageId};
-use opts::Opts;
+use actix_web::{
+    error, fs, http,
+    middleware::{Finished, Middleware, Started},
+    server, App, AsyncResponder, HttpMessage, HttpRequest, HttpResponse, Responder, Result,
+};
 
 use futures::Future;
 
-use tpl;
+use crate::{
+    config,
+    data::{self, MatchType, PageId},
+    opts::Opts,
+    page::Page,
+    tpl,
+};
 
 fn login(_: String) -> impl Responder {
     format!("Login - not implemented yet")
@@ -58,7 +62,7 @@ fn post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = erro
         .and_then(move |input: PostInput| {
             let data_read = data.read();
 
-            let new_page = ::page::Page::from_markdown(input.text.clone());
+            let new_page = Page::from_markdown(input.text.clone());
 
             let lookup = data_read.lookup_exact(new_page.tags.clone());
 
@@ -104,7 +108,7 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
             let data_read = data.read();
             let page_id = data_read.lookup(url_tags)?;
 
-            let new_page = ::page::Page::from_markdown(input.text.clone());
+            let new_page = Page::from_markdown(input.text.clone());
 
             let lookup = data_read.lookup_exact(new_page.tags.clone());
 
@@ -134,10 +138,10 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
 }
 
 fn get_index(
-    match_: &::data::Match,
+    match_: &data::Match,
     cur_url: &str,
     page_ids: &[PageId],
-    data: &::data::State,
+    data: &data::State,
 ) -> Result<HttpResponse, error::Error> {
     let mut pages: Vec<_> = page_ids
         .iter()
@@ -149,7 +153,7 @@ fn get_index(
         &tpl::index::Data {
             base: tpl::base::Data {
                 title: if match_.matching_tags.is_empty() {
-                    ::config::WIKI_NAME_TEXT.into()
+                    config::WIKI_NAME_TEXT.into()
                 } else {
                     match_.matching_tags.join("/")
                 },
@@ -232,7 +236,7 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
 
 #[derive(Clone)]
 struct State {
-    data: ::data::SyncState,
+    data: data::SyncState,
     opts: Opts,
 }
 

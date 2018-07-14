@@ -1,8 +1,12 @@
+cargo-features = ["edition"]
+
 [package]
 authors = ["Dawid Ciężarkiewicz <dpc@dpc.pw>"]
 license = "MPL-2.0"
 name = "brainwiki"
 version = "0.1.0"
+edition = '2018'
+
 [[bin]]
 name = "brainwiki"
 path = "src/main.rs"

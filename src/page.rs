@@ -1,8 +1,8 @@
-use markdown;
+use crate::markdown;
 use std::fs;
 use std::path::Path;
 
-use Result;
+use crate::Result;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Page {
