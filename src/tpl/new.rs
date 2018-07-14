@@ -1,8 +1,8 @@
-use stpl::html::{button, div, raw, script};
-use stpl::Render;
-
 use super::base;
 use super::misc::*;
+use chrono;
+use stpl::html::{button, div, raw, script};
+use stpl::Render;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Data {
@@ -15,7 +15,13 @@ pub fn page(data: &Data) -> impl Render {
         breadcrumb_from_tags(&["New".into()]),
         row((
             col_menu(()),
-            col((div.id("edit_tab")((div.id("editor").class("my-2")(()),)),)),
+            col((div.id("edit_tab")((div.id("editor").class("my-2")((
+                format!(
+                    "Creation-Date: {}",
+                    chrono::Local::now().format("%F %H-%M %Z")
+                ),
+                "\n\n# ",
+            )),)),)),
         )),
     );
 

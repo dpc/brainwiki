@@ -41,6 +41,7 @@
 #[macro_use]
 extern crate lazy_static;
 extern crate actix_web;
+extern crate chrono;
 extern crate pulldown_cmark;
 extern crate regex;
 #[macro_use]

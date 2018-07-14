@@ -36,4 +36,5 @@ $(document).ready(function() {
   editor.session.setMode("ace/mode/markdown");
   editor.setKeyboardHandler("ace/keyboard/vim");
   editor.focus();
+  editor.gotoLine(3, 2, false);
 });
