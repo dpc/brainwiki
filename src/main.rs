@@ -36,10 +36,9 @@
 //!
 //! Clone, `cargo build`. Run the binary with `--data <dir-with-md-files>`
 
-#![feature(rust_2018_preview)]
+#![feature(rust_2018_preview, use_extern_macros)]
 #![feature(nll)]
 
-#[macro_use]
 extern crate lazy_static;
 extern crate actix_web;
 extern crate chrono;

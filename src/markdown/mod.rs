@@ -1,5 +1,6 @@
 use pulldown_cmark::{html, Event, Parser};
 
+use lazy_static::lazy_static;
 use regex::Regex;
 pub type Tag = String;
 pub type RenderedHtml = String;
