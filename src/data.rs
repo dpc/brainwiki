@@ -103,7 +103,6 @@ impl State {
     pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
         let page = Page::read_from_file(md_path)?;
 
-        debug_assert_eq!(md_path, md_path.canonicalize().unwrap());
         self.insert(page, &md_path.canonicalize()?);
         Ok(())
     }

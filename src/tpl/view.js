@@ -38,7 +38,6 @@ $("#save").click(function(){
     dataType: 'json'
   });
 });
-
 $(document).ready(function() {
   editor = ace.edit("editor");
   editor.setTheme("ace/theme/textmate");

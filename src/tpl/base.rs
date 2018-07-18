@@ -19,10 +19,12 @@ pub struct Data {
 pub fn search_form(data: &Data) -> impl Render {
     form.class("form-inline mx-1")
         .role("search")
+        .id("search-form")
         .action("/~search")
         .method("get")(div.class("input-group")((
         {
             let this_input = input
+                .id("search-query")
                 .class("form-control")
                 .placeholder("Query...")
                 .attr("type", "text")
@@ -34,7 +36,10 @@ pub fn search_form(data: &Data) -> impl Render {
                 this_input
             }
         },
-        span.class("input-group-btn")(button.type_("submit").class("btn btn-info")(("Search",))),
+        span.class("input-group-btn")(button
+            .id("search-button")
+            .type_("submit")
+            .class("btn btn-info")(("Search",))),
     )))
 }
 
@@ -82,6 +87,7 @@ pub fn my_footer() -> impl Render {
     )),))
 }
 
+#[allow(unused)]
 pub fn base(data: &Data, content: Box<dyn Render>, buttons: Box<dyn Render>) -> impl Render {
     base_with_js(data, content, buttons, Box::new(()))
 }

@@ -17,7 +17,7 @@
 use actix_web::{
     error, fs, http,
     middleware::{Finished, Middleware, Started},
-    server, App, AsyncResponder, HttpMessage, HttpRequest, HttpResponse, Responder, Result,
+    server, App, AsyncResponder, HttpMessage, HttpRequest, HttpResponse, Query, Responder, Result,
 };
 
 use futures::Future;
@@ -35,6 +35,7 @@ fn login(_: String) -> impl Responder {
 }
 
 fn redirect_to(location: &str) -> HttpResponse {
+    println!("{}", location);
     HttpResponse::TemporaryRedirect()
         .header("Location", location)
         .finish()
@@ -182,6 +183,25 @@ fn url_to_tags(url: &str) -> (Vec<String>, bool) {
     (tags, prefer_exact)
 }
 
+#[derive(Debug, Deserialize)]
+struct SearchQuery {
+    q: String,
+}
+
+fn search(query: Query<SearchQuery>) -> Result<HttpResponse, error::Error> {
+    println!("{}", query.q);
+    let tags: Vec<String> = query
+        .q
+        .trim()
+        .split(|c| c == ' ' || c == ',')
+        .filter(|s| s != &"")
+        .map(Into::into)
+        .collect();
+    Ok(redirect_to(
+        (String::from("/") + tags.join("/").as_str()).as_str(),
+    ))
+}
+
 fn new_page(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
     let cur_url = req.path();
 
@@ -262,15 +282,14 @@ pub fn start(data: data::SyncState, opts: Opts) {
     server::new(move || {
         App::with_state(state.clone())
             .middleware(Logger)
-            //.route("/", http::Method::GET, index)
             .route("/~login", http::Method::GET, login)
+            .route("/~search", http::Method::GET, search)
             .route("/~new", http::Method::GET, new_page)
             .handler("/~theme", fs::StaticFiles::new(opts.theme_dir.clone()))
             .default_resource(|r| {
-
-                               r.get().f(get);
-                               r.post().f(post);
-                               r.put().f(put);
+                r.get().f(get);
+                r.post().f(post);
+                r.put().f(put);
             })
     }).bind("127.0.0.1:8080")
         .unwrap()
