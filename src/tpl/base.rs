@@ -21,7 +21,7 @@ pub fn search_form(data: &Data) -> impl Render {
         .role("search")
         .id("search-form")
         .action("/~search")
-        .method("get")(div.class("input-group")((
+        .method("post")(div.class("input-group")((
         {
             let this_input = input
                 .id("search-query")

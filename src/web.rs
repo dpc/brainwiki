@@ -16,8 +16,12 @@
 
 use actix_web::{
     error, fs, http,
-    middleware::{Finished, Middleware, Started},
-    server, App, AsyncResponder, HttpMessage, HttpRequest, HttpResponse, Query, Responder, Result,
+    middleware::{
+        session::{CookieSessionBackend, RequestSession, SessionStorage},
+        Finished, Middleware, Started,
+    },
+    server, App, AsyncResponder, Form, FromRequest, HttpMessage, HttpRequest, HttpResponse, Query,
+    Result,
 };
 
 use futures::Future;
@@ -29,16 +33,51 @@ use crate::{
     page::Page,
     tpl,
 };
+fn login_get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+    let cur_url = req.path();
+    let body = tpl::render(
+        &tpl::login_tpl(),
+        &tpl::login::Data {
+            base: tpl::base::Data {
+                title: config::WIKI_NAME_TEXT.into(),
+                search_query: None,
+            },
+            cur_url: cur_url.into(),
+        },
+    );
+    Ok(HttpResponse::Ok().body(body))
+}
 
-fn login(_: String) -> impl Responder {
-    format!("Login - not implemented yet")
+#[derive(Deserialize, Debug, Clone)]
+struct PasswordForm {
+    password: String,
+}
+
+fn login_post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+    Form::<PasswordForm>::extract(&req)
+        .and_then(move |form| {
+            if form.password == "bazinga" {
+                req.session().set("logge_in", true);
+                Ok(redirect_to_303("/"))
+            } else {
+                Ok(redirect_to_303("/~login"))
+            }
+        })
+        .responder()
+}
+
+fn logout(_req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+    Ok(redirect_to_303("/"))
 }
 
 fn redirect_to(location: &str) -> HttpResponse {
-    println!("{}", location);
     HttpResponse::TemporaryRedirect()
         .header("Location", location)
         .finish()
+}
+
+fn redirect_to_303(location: &str) -> HttpResponse {
+    HttpResponse::Found().header("Location", location).finish()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -55,10 +94,6 @@ fn post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = erro
     let data = req.state().data.clone();
     let data_dir = req.state().opts.data_dir.clone();
     req.json()
-        .map_err(|e| {
-            println!("{}", e);
-            e
-        })
         .from_err()
         .and_then(move |input: PostInput| {
             let data_read = data.read();
@@ -188,8 +223,7 @@ struct SearchQuery {
     q: String,
 }
 
-fn search(query: Query<SearchQuery>) -> Result<HttpResponse, error::Error> {
-    println!("{}", query.q);
+fn search_get(query: Query<SearchQuery>) -> Result<HttpResponse, error::Error> {
     let tags: Vec<String> = query
         .q
         .trim()
@@ -198,6 +232,19 @@ fn search(query: Query<SearchQuery>) -> Result<HttpResponse, error::Error> {
         .map(Into::into)
         .collect();
     Ok(redirect_to(
+        (String::from("/") + tags.join("/").as_str()).as_str(),
+    ))
+}
+
+fn search_post(query: Form<SearchQuery>) -> Result<HttpResponse, error::Error> {
+    let tags: Vec<String> = query
+        .q
+        .trim()
+        .split(|c| c == ' ' || c == ',')
+        .filter(|s| s != &"")
+        .map(Into::into)
+        .collect();
+    Ok(redirect_to_303(
         (String::from("/") + tags.join("/").as_str()).as_str(),
     ))
 }
@@ -273,17 +320,29 @@ impl<S> Middleware<S> for Logger {
     }
 }
 
+fn is_logged_in(req: &HttpRequest) -> Result<bool> {
+    Ok(req.session().get::<bool>("logged_in")?.unwrap_or(false))
+}
+
 pub fn start(data: data::SyncState, opts: Opts) {
     let state = State {
         data: data,
         opts: opts.clone(),
     };
 
-    server::new(move || {
+    let mut listenfd = listenfd::ListenFd::from_env();
+
+    let server = server::new(move || {
         App::with_state(state.clone())
             .middleware(Logger)
-            .route("/~login", http::Method::GET, login)
-            .route("/~search", http::Method::GET, search)
+            .middleware(SessionStorage::new(
+                CookieSessionBackend::signed(&[0; 32]).secure(false),
+            ))
+            .route("/~login", http::Method::GET, login_get)
+            .route("/~login", http::Method::POST, login_post)
+            .route("/~logout", http::Method::POST, logout)
+            .route("/~search", http::Method::GET, search_get)
+            .route("/~search", http::Method::POST, search_post)
             .route("/~new", http::Method::GET, new_page)
             .handler("/~theme", fs::StaticFiles::new(opts.theme_dir.clone()))
             .default_resource(|r| {
@@ -291,7 +350,10 @@ pub fn start(data: data::SyncState, opts: Opts) {
                 r.post().f(post);
                 r.put().f(put);
             })
-    }).bind("127.0.0.1:8080")
-        .unwrap()
-        .run();
+    });
+    if let Some(l) = listenfd.take_tcp_listener(0).unwrap() {
+        server.listen(l)
+    } else {
+        server.bind("127.0.0.1:8080").unwrap()
+    }.run();
 }

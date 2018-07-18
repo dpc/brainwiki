@@ -3,6 +3,7 @@ pub mod index;
 pub mod misc;
 pub mod view;
 pub mod new;
+pub mod login;
 
 use serde;
 use std;
@@ -26,6 +27,7 @@ macro_rules! def_tpl {
 def_tpl!(view_tpl, view);
 def_tpl!(index_tpl, index);
 def_tpl!(new_tpl, new);
+def_tpl!(login_tpl, login);
 
 pub fn render<T: stpl::Template>(
     template: &T,

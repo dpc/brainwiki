@@ -39,6 +39,7 @@
 #![feature(rust_2018_preview, use_extern_macros)]
 #![feature(nll)]
 
+extern crate listenfd;
 extern crate lazy_static;
 extern crate actix_web;
 extern crate chrono;
