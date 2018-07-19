@@ -35,7 +35,10 @@ pub fn page(data: &Data) -> impl Render {
         )),
     );
 
-    let buttons = (a.id("new").class("btn btn-info mx-1").href("/~new")("New"),);
+    let buttons = a
+        .id("new")
+        .class("btn btn-outline-primary mx-1")
+        .href("/~new")("New");
 
     base::base_with_js(
         &data.base,

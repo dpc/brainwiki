@@ -2,6 +2,7 @@ use super::misc::*;
 use stpl::html::*;
 use stpl::Render;
 
+use boolinator::Boolinator;
 use crate::config;
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -13,39 +14,31 @@ pub struct Flash {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Data {
     pub title: String,
-    pub search_query: Option<String>,
+    pub is_logged_in: bool,
 }
 
-pub fn search_form(data: &Data) -> impl Render {
+pub fn search_form(_data: &Data) -> impl Render {
     form.class("form-inline mx-1")
         .role("search")
         .id("search-form")
         .action("/~search")
         .method("post")(div.class("input-group")((
-        {
-            let this_input = input
-                .id("search-query")
-                .class("form-control")
-                .placeholder("Query...")
-                .attr("type", "text")
-                .name("q");
-
-            if let Some(q) = data.search_query.clone() {
-                this_input.value(q)
-            } else {
-                this_input
-            }
-        },
+        input
+            .id("search-query")
+            .class("form-control")
+            .placeholder("Tags...")
+            .attr("type", "text")
+            .name("q"),
         span.class("input-group-btn")(button
             .id("search-button")
             .type_("submit")
-            .class("btn btn-info")(("Search",))),
+            .class("btn btn-outline-secondary")(("Search",))),
     )))
 }
 
 pub fn navbar(data: &Data, buttons: Box<dyn Render>) -> impl Render {
     (nav.id("main-navbar").class(
-        "navbar navbar-expand-sm navbar-dark bg-primary fixed-top",
+        "navbar navbar-expand-sm navbar-light bg-light fixed-top",
     )((div.class("container")((
         a.class("navbar-brand").href("/")(config::WIKI_NAME_TEXT),
         button
@@ -75,8 +68,20 @@ pub fn navbar(data: &Data, buttons: Box<dyn Render>) -> impl Render {
             } else {
                 None
             }),)),
-            buttons,
+            data.is_logged_in.as_some(buttons),
             search_form(data),
+            data.is_logged_in
+                .as_some(form.action("/~logout").method("post")(button
+                    .name("logout-button")
+                    .id("logout-button")
+                    .class("btn btn-outline-warning mx-1")
+                    .value("logout")(
+                    "Logout"
+                ))),
+            (!data.is_logged_in).as_some(a
+                .id("login-button")
+                .class("btn btn-outline-success mx-1")
+                .href("/~login")("Login")),
         )),
     )),)),)
 }

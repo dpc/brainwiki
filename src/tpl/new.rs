@@ -35,7 +35,10 @@ pub fn page(data: &Data) -> impl Render {
             .charset("utf-8")
     }
 
-    let buttons = (button.id("save").type_("submit").class("btn btn-info mx-1")("Save"),);
+    let buttons = button
+        .id("save")
+        .type_("submit")
+        .class("btn btn-outline-primary mx-1")("Save");
 
     let js = (
         ace_script("ace.js"),

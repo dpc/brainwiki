@@ -24,7 +24,7 @@ pub fn page(data: &Data) -> impl Render {
                     .id("login-password")
                     .class("form-control")
                     .placeholder("Password...")
-                    .attr("type", "text")
+                    .attr("type", "password")
                     .name("password"),
                 span.class("input-group-btn")(button
                     .id("login-submit-button")

@@ -59,8 +59,7 @@ extern crate futures;
 extern crate bytes;
 #[macro_use]
 extern crate derive_more;
-//#[macro_use]
-//extern crate json;
+extern crate boolinator;
 
 mod config;
 mod data;

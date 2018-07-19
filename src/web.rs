@@ -24,6 +24,10 @@ use actix_web::{
     Result,
 };
 
+const LOGGED_IN_COOKIE_NAME: &str = "logged_in";
+//TODO
+const LOGIN_PASSWORD: &str = "password";
+
 use futures::Future;
 
 use crate::{
@@ -50,6 +54,13 @@ impl error::ResponseError for UserError {
     }
 }
 
+fn is_logged_in(req: &HttpRequest<State>) -> Result<bool> {
+    Ok(req
+        .session()
+        .get::<bool>(LOGGED_IN_COOKIE_NAME)?
+        .unwrap_or(false))
+}
+
 fn login_get(req: HttpRequest<State>) -> Result<HttpResponse> {
     let cur_url = req.path();
     let body = tpl::render(
@@ -57,7 +68,7 @@ fn login_get(req: HttpRequest<State>) -> Result<HttpResponse> {
         &tpl::login::Data {
             base: tpl::base::Data {
                 title: config::WIKI_NAME_TEXT.into(),
-                search_query: None,
+                is_logged_in: is_logged_in(&req)?,
             },
             cur_url: cur_url.into(),
         },
@@ -73,8 +84,8 @@ struct PasswordForm {
 fn login_post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
     Form::<PasswordForm>::extract(&req)
         .and_then(move |form| {
-            if form.password == "bazinga" {
-                req.session().set("logge_in", true)?;
+            if form.password == LOGIN_PASSWORD {
+                req.session().set(LOGGED_IN_COOKIE_NAME, true)?;
                 Ok(redirect_to_303("/"))
             } else {
                 Ok(redirect_to_303("/~login"))
@@ -83,7 +94,8 @@ fn login_post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error 
         .responder()
 }
 
-fn logout(_req: HttpRequest<State>) -> Result<HttpResponse> {
+fn logout(req: HttpRequest<State>) -> Result<HttpResponse> {
+    req.session().remove(LOGGED_IN_COOKIE_NAME);
     Ok(redirect_to_303("/"))
 }
 
@@ -110,7 +122,7 @@ struct PostResponse {
 fn assert_is_authorized(req: &HttpRequest<State>) -> UserResult<()> {
     if !req
         .session()
-        .get::<bool>("logged_in")
+        .get::<bool>(LOGGED_IN_COOKIE_NAME)
         .unwrap_or(None)
         .unwrap_or(false)
     {
@@ -212,6 +224,7 @@ fn put(
 }
 
 fn get_index(
+    req: &HttpRequest<State>,
     match_: &data::Match,
     cur_url: &str,
     page_ids: &[PageId],
@@ -231,7 +244,7 @@ fn get_index(
                 } else {
                     match_.matching_tags.join("/")
                 },
-                search_query: None,
+                is_logged_in: is_logged_in(req)?,
             },
             pages: pages,
             cur_url: cur_url.into(),
@@ -288,6 +301,7 @@ fn search_post(query: Form<SearchQuery>) -> Result<HttpResponse> {
 }
 
 fn new_page(req: HttpRequest<State>) -> Result<HttpResponse> {
+    assert_is_authorized(&req)?;
     let cur_url = req.path();
 
     let body = tpl::render(
@@ -295,7 +309,7 @@ fn new_page(req: HttpRequest<State>) -> Result<HttpResponse> {
         &tpl::new::Data {
             base: tpl::base::Data {
                 title: "New post".into(),
-                search_query: None,
+                is_logged_in: is_logged_in(&req)?,
             },
             cur_url: cur_url.into(),
         },
@@ -325,7 +339,7 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
                 &tpl::view::Data {
                     base: tpl::base::Data {
                         title: page.title.clone(),
-                        search_query: None,
+                        is_logged_in: is_logged_in(&req)?,
                     },
                     page: page.clone(),
                     cur_url: cur_url.into(),
@@ -334,7 +348,9 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
             );
             Ok(HttpResponse::Ok().body(body))
         }
-        MatchType::Many(ref page_ids) => get_index(&match_, cur_url, page_ids.as_slice(), &*data),
+        MatchType::Many(ref page_ids) => {
+            get_index(&req, &match_, cur_url, page_ids.as_slice(), &*data)
+        }
         MatchType::None => Ok(HttpResponse::Ok().body(format!("Not Found :("))),
     }
 }
@@ -370,6 +386,7 @@ pub fn start(data: data::SyncState, opts: Opts) {
         App::with_state(state.clone())
             .middleware(Logger)
             .middleware(SessionStorage::new(
+                // TODO
                 CookieSessionBackend::signed(&[0; 32]).secure(false),
             ))
             .route("/~login", http::Method::GET, login_get)

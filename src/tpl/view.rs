@@ -43,13 +43,18 @@ pub fn page(data: &Data) -> impl Render {
     }
 
     let buttons = (
-        a.id("new").class("btn btn-info mx-1").href("/~new")("New"),
-        button.id("edit").type_("submit").class("btn btn-info mx-1")("Edit"),
+        a.id("new")
+            .class("btn btn-outline-primary mx-1")
+            .href("/~new")("New"),
+        button
+            .id("edit")
+            .type_("submit")
+            .class("btn btn-outline-primary mx-1")("Edit"),
         button
             .id("save")
             .attr("style", "display: none;")
             .type_("submit")
-            .class("btn btn-info mx-1")("Save"),
+            .class("btn btn-outline-primary mx-1")("Save"),
     );
 
     let js = (
