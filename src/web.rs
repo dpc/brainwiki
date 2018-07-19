@@ -33,7 +33,24 @@ use crate::{
     page::Page,
     tpl,
 };
-fn login_get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+
+#[derive(Fail, Debug)]
+enum UserError {
+    #[fail(display = "Unauthorized")]
+    Unauthorized,
+}
+
+type UserResult<T> = std::result::Result<T, UserError>;
+
+impl error::ResponseError for UserError {
+    fn error_response(&self) -> HttpResponse {
+        match *self {
+            UserError::Unauthorized => HttpResponse::new(http::StatusCode::UNAUTHORIZED),
+        }
+    }
+}
+
+fn login_get(req: HttpRequest<State>) -> Result<HttpResponse> {
     let cur_url = req.path();
     let body = tpl::render(
         &tpl::login_tpl(),
@@ -57,7 +74,7 @@ fn login_post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error 
     Form::<PasswordForm>::extract(&req)
         .and_then(move |form| {
             if form.password == "bazinga" {
-                req.session().set("logge_in", true);
+                req.session().set("logge_in", true)?;
                 Ok(redirect_to_303("/"))
             } else {
                 Ok(redirect_to_303("/~login"))
@@ -66,7 +83,7 @@ fn login_post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error 
         .responder()
 }
 
-fn logout(_req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+fn logout(_req: HttpRequest<State>) -> Result<HttpResponse> {
     Ok(redirect_to_303("/"))
 }
 
@@ -90,10 +107,26 @@ struct PostResponse {
     redirect: String,
 }
 
-fn post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+fn assert_is_authorized(req: &HttpRequest<State>) -> UserResult<()> {
+    if !req
+        .session()
+        .get::<bool>("logged_in")
+        .unwrap_or(None)
+        .unwrap_or(false)
+    {
+        return Err(UserError::Unauthorized);
+    }
+
+    Ok(())
+}
+
+fn post(req: HttpRequest<State>) -> Result<Box<Future<Item = HttpResponse, Error = error::Error>>> {
+    assert_is_authorized(&req)?;
     let data = req.state().data.clone();
     let data_dir = req.state().opts.data_dir.clone();
-    req.json()
+
+    Ok(req
+        .json()
         .from_err()
         .and_then(move |input: PostInput| {
             let data_read = data.read();
@@ -117,7 +150,7 @@ fn post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = erro
             println!("2: {}", e);
             e
         })
-        .responder()
+        .responder())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -130,10 +163,15 @@ struct PutResponse {
     redirect: String,
 }
 
-fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+fn put(
+    req: HttpRequest<State>,
+) -> UserResult<Box<Future<Item = HttpResponse, Error = error::Error>>> {
+    assert_is_authorized(&req)?;
     let cur_url = req.path().to_owned();
     let data = req.state().data.clone();
-    req.json()
+
+    Ok(req
+        .json()
         .map_err(|e| {
             println!("{}", e);
             e
@@ -170,7 +208,7 @@ fn put(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error
             println!("2: {}", e);
             e
         })
-        .responder()
+        .responder())
 }
 
 fn get_index(
@@ -178,7 +216,7 @@ fn get_index(
     cur_url: &str,
     page_ids: &[PageId],
     data: &data::State,
-) -> Result<HttpResponse, error::Error> {
+) -> Result<HttpResponse> {
     let mut pages: Vec<_> = page_ids
         .iter()
         .map(|page_id| data.pages_by_id.get(&page_id).unwrap().clone())
@@ -223,7 +261,7 @@ struct SearchQuery {
     q: String,
 }
 
-fn search_get(query: Query<SearchQuery>) -> Result<HttpResponse, error::Error> {
+fn search_get(query: Query<SearchQuery>) -> Result<HttpResponse> {
     let tags: Vec<String> = query
         .q
         .trim()
@@ -236,7 +274,7 @@ fn search_get(query: Query<SearchQuery>) -> Result<HttpResponse, error::Error> {
     ))
 }
 
-fn search_post(query: Form<SearchQuery>) -> Result<HttpResponse, error::Error> {
+fn search_post(query: Form<SearchQuery>) -> Result<HttpResponse> {
     let tags: Vec<String> = query
         .q
         .trim()
@@ -249,7 +287,7 @@ fn search_post(query: Form<SearchQuery>) -> Result<HttpResponse, error::Error> {
     ))
 }
 
-fn new_page(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+fn new_page(req: HttpRequest<State>) -> Result<HttpResponse> {
     let cur_url = req.path();
 
     let body = tpl::render(
@@ -265,7 +303,7 @@ fn new_page(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
     Ok(HttpResponse::Ok().body(body))
 }
 
-fn get(req: HttpRequest<State>) -> Result<HttpResponse, error::Error> {
+fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
     let cur_url = req.path();
     let (tags, prefer_exact) = url_to_tags(cur_url);
     let data = req.state().data.read();
@@ -318,10 +356,6 @@ impl<S> Middleware<S> for Logger {
     fn finish(&self, _req: &mut HttpRequest<S>, _resp: &HttpResponse) -> Finished {
         Finished::Done
     }
-}
-
-fn is_logged_in(req: &HttpRequest) -> Result<bool> {
-    Ok(req.session().get::<bool>("logged_in")?.unwrap_or(false))
 }
 
 pub fn start(data: data::SyncState, opts: Opts) {
