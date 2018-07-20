@@ -1,11 +1,12 @@
-use super::base;
-use super::misc::*;
-use stpl::html::{button, div, form, input, span};
-use stpl::Render;
+use super::{base, misc::*};
+use stpl::{
+    html::{button, div, form, input, span},
+    Render,
+};
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Data {
-    pub base: base::Data,
+#[derive(Clone)]
+pub struct Data<'a> {
+    pub base: base::Data<'a>,
     pub cur_url: String,
 }
 
@@ -19,7 +20,9 @@ pub fn page(data: &Data) -> impl Render {
                 .role("login")
                 .id("search-form")
                 .action("/~login")
-                .method("post")(div.class("input-group")((
+                .method("post")(div
+                .class("input-group")(
+                (
                 input
                     .id("login-password")
                     .class("form-control")
@@ -29,10 +32,13 @@ pub fn page(data: &Data) -> impl Render {
                 span.class("input-group-btn")(button
                     .id("login-submit-button")
                     .type_("submit")
-                    .class("btn btn-info")((
+                    .class("btn btn-info")(
+                    (
                     "Login",
-                ))),
-            )))),
+                )
+                )),
+            )
+            ))),
         )),
     );
 

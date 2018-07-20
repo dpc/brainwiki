@@ -1,13 +1,17 @@
-use stpl::html::{a, button, div, raw, script};
-use stpl::Render;
+use stpl::{
+    html::{a, button, div, raw, script},
+    Render,
+};
 
-use super::misc::*;
-use super::{base, misc};
+use super::{
+    base,
+    misc::{self, *},
+};
 use crate::{data, page::Page};
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Data {
-    pub base: base::Data,
+#[derive(Clone)]
+pub struct Data<'a> {
+    pub base: base::Data<'a>,
     pub page: Page,
     pub cur_url: String,
     pub narrowing_tags: data::NarrowingTagsSet,
@@ -18,16 +22,25 @@ pub fn page(data: &Data) -> impl Render {
         breadcrumb_from_tags(&data.page.tags.as_slice()),
         row((
             col_menu((
-                misc::narrowing_tags_col(&data.cur_url, &data.narrowing_tags),
-                misc::broadening_tags_col(&data.cur_url, data.page.tags.clone()),
+                misc::narrowing_tags_col(
+                    &data.cur_url,
+                    &data.narrowing_tags,
+                ),
+                misc::broadening_tags_col(
+                    &data.cur_url,
+                    data.page.tags.clone(),
+                ),
             )),
             col((
                 div.id("view_tab")((data.page.html.clone(),)),
-                div.id("edit_tab").attr("style", "display: none;")((div
-                    .id("editor")
-                    .class("my-2")(
-                    data.page.md.clone()
-                ),)),
+                div.id("edit_tab")
+                    .attr("style", "display: none;")(
+                    (
+                    div.id("editor").class("my-2")(
+                        data.page.md.clone(),
+                    ),
+                )
+                ),
             )),
         )),
     );
@@ -49,12 +62,16 @@ pub fn page(data: &Data) -> impl Render {
         button
             .id("edit")
             .type_("submit")
-            .class("btn btn-outline-primary mx-1")("Edit"),
+            .class("btn btn-outline-primary mx-1")(
+            "Edit"
+        ),
         button
             .id("save")
             .attr("style", "display: none;")
             .type_("submit")
-            .class("btn btn-outline-primary mx-1")("Save"),
+            .class("btn btn-outline-primary mx-1")(
+            "Save"
+        ),
     );
 
     let js = (

@@ -1,15 +1,15 @@
-use stpl::html::*;
-use stpl::Render;
+use stpl::{html::*, Render};
 
-use super::misc::*;
-use super::{base, misc};
+use super::{
+    base,
+    misc::{self, *},
+};
 
-use crate::data;
-use crate::page::Page;
+use crate::{data, page::Page};
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Data {
-    pub base: base::Data,
+#[derive(Clone, Debug)]
+pub struct Data<'a> {
+    pub base: base::Data<'a>,
     pub cur_url: String,
     pub pages: Vec<Page>,
     pub narrowing_tags: data::NarrowingTagsSet,
@@ -29,7 +29,11 @@ pub fn page(data: &Data) -> impl Render {
                 ul(data
                     .pages
                     .iter()
-                    .map(|page| li(a.href(page.url())(page.title.clone())))
+                    .map(|page| {
+                        li(a.href(page.url())(
+                            page.title.clone(),
+                        ))
+                    })
                     .collect::<Vec<_>>()),
             )),
         )),

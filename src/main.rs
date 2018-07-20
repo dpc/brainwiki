@@ -39,41 +39,46 @@
 #![feature(rust_2018_preview, use_extern_macros)]
 #![feature(nll)]
 
-extern crate listenfd;
-extern crate lazy_static;
 extern crate actix_web;
 extern crate chrono;
+extern crate lazy_static;
+extern crate listenfd;
 extern crate pulldown_cmark;
 extern crate regex;
-#[macro_use]
 extern crate structopt;
 #[macro_use]
 extern crate failure;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate bytes;
+extern crate futures;
 extern crate notify;
 extern crate serde_json;
 extern crate stpl;
-extern crate futures;
-extern crate bytes;
 #[macro_use]
 extern crate derive_more;
 extern crate boolinator;
+#[macro_use]
+extern crate quicli;
 
-mod config;
 mod data;
 mod markdown;
 mod opts;
 mod page;
+mod settings;
 mod tpl;
 mod web;
 
+use structopt::StructOpt;
+
 type Result<T> = std::result::Result<T, failure::Error>;
 
-fn main() {
-    let opts = opts::from_args();
-    markdown::parse_markdown("");
+//main!(|args: opts::Opts, log_level: verbosity| {
+main!(|opts: opts::Opts| {
+    let settings = settings::SiteSettings::load_or_create_in(
+        &opts.data_dir,
+    )?;
 
     let state = data::SyncState::new();
 
@@ -84,6 +89,5 @@ fn main() {
 
     state.write().insert_from_dir(&opts.data_dir).unwrap();
 
-
     web::start(state, opts);
-}
+});

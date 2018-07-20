@@ -1,12 +1,13 @@
-use super::base;
-use super::misc::*;
+use super::{base, misc::*};
 use chrono;
-use stpl::html::{button, div, raw, script};
-use stpl::Render;
+use stpl::{
+    html::{button, div, raw, script},
+    Render,
+};
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Data {
-    pub base: base::Data,
+#[derive(Clone)]
+pub struct Data<'a> {
+    pub base: base::Data<'a>,
     pub cur_url: String,
 }
 
@@ -15,13 +16,17 @@ pub fn page(data: &Data) -> impl Render {
         breadcrumb_from_tags(&["New".into()]),
         row((
             col_menu(()),
-            col((div.id("edit_tab")((div.id("editor").class("my-2")((
+            col((div.id("edit_tab")((div
+                .id("editor")
+                .class("my-2")(
+                (
                 format!(
                     "Creation-Date: {}",
                     chrono::Local::now().format("%F %H-%M %Z")
                 ),
                 "\n\n# ",
-            )),)),)),
+            )
+            ),)),)),
         )),
     );
 
@@ -38,7 +43,9 @@ pub fn page(data: &Data) -> impl Render {
     let buttons = button
         .id("save")
         .type_("submit")
-        .class("btn btn-outline-primary mx-1")("Save");
+        .class("btn btn-outline-primary mx-1")(
+        "Save"
+    );
 
     let js = (
         ace_script("ace.js"),

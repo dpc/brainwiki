@@ -17,12 +17,18 @@
 use actix_web::{
     error, fs, http,
     middleware::{
-        session::{CookieSessionBackend, RequestSession, SessionStorage},
+        session::{
+            CookieSessionBackend, RequestSession, SessionStorage,
+        },
         Finished, Middleware, Started,
     },
-    server, App, AsyncResponder, Form, FromRequest, HttpMessage, HttpRequest, HttpResponse, Query,
-    Result,
+    server, App, AsyncResponder, Form, FromRequest, HttpMessage,
+    HttpRequest, HttpResponse, Query, Result,
 };
+
+use crate::settings::SiteSettings;
+use std::sync::Arc;
+use stpl::html::RenderExt;
 
 const LOGGED_IN_COOKIE_NAME: &str = "logged_in";
 //TODO
@@ -31,7 +37,6 @@ const LOGIN_PASSWORD: &str = "password";
 use futures::Future;
 
 use crate::{
-    config,
     data::{self, MatchType, PageId},
     opts::Opts,
     page::Page,
@@ -49,7 +54,9 @@ type UserResult<T> = std::result::Result<T, UserError>;
 impl error::ResponseError for UserError {
     fn error_response(&self) -> HttpResponse {
         match *self {
-            UserError::Unauthorized => HttpResponse::new(http::StatusCode::UNAUTHORIZED),
+            UserError::Unauthorized => {
+                HttpResponse::new(http::StatusCode::UNAUTHORIZED)
+            }
         }
     }
 }
@@ -63,17 +70,15 @@ fn is_logged_in(req: &HttpRequest<State>) -> Result<bool> {
 
 fn login_get(req: HttpRequest<State>) -> Result<HttpResponse> {
     let cur_url = req.path();
-    let body = tpl::render(
-        &tpl::login_tpl(),
-        &tpl::login::Data {
-            base: tpl::base::Data {
-                title: config::WIKI_NAME_TEXT.into(),
-                is_logged_in: is_logged_in(&req)?,
-            },
-            cur_url: cur_url.into(),
+    let body = tpl::login::page(&tpl::login::Data {
+        base: tpl::base::Data {
+            title: req.state().site_settings.short_name.clone(),
+            site_settings: &req.state().site_settings,
+            is_logged_in: is_logged_in(&req)?,
         },
-    );
-    Ok(HttpResponse::Ok().body(body))
+        cur_url: cur_url.into(),
+    });
+    Ok(HttpResponse::Ok().body(body.render_to_vec()))
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -81,7 +86,9 @@ struct PasswordForm {
     password: String,
 }
 
-fn login_post(req: HttpRequest<State>) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+fn login_post(
+    req: HttpRequest<State>,
+) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
     Form::<PasswordForm>::extract(&req)
         .and_then(move |form| {
             if form.password == LOGIN_PASSWORD {
@@ -119,7 +126,9 @@ struct PostResponse {
     redirect: String,
 }
 
-fn assert_is_authorized(req: &HttpRequest<State>) -> UserResult<()> {
+fn assert_is_authorized(
+    req: &HttpRequest<State>,
+) -> UserResult<()> {
     if !req
         .session()
         .get::<bool>(LOGGED_IN_COOKIE_NAME)
@@ -132,7 +141,10 @@ fn assert_is_authorized(req: &HttpRequest<State>) -> UserResult<()> {
     Ok(())
 }
 
-fn post(req: HttpRequest<State>) -> Result<Box<Future<Item = HttpResponse, Error = error::Error>>> {
+fn post(
+    req: HttpRequest<State>,
+) -> Result<Box<Future<Item = HttpResponse, Error = error::Error>>>
+{
     assert_is_authorized(&req)?;
     let data = req.state().data.clone();
     let data_dir = req.state().opts.data_dir.clone();
@@ -143,9 +155,11 @@ fn post(req: HttpRequest<State>) -> Result<Box<Future<Item = HttpResponse, Error
         .and_then(move |input: PostInput| {
             let data_read = data.read();
 
-            let new_page = Page::from_markdown(input.text.clone());
+            let new_page =
+                Page::from_markdown(input.text.clone());
 
-            let lookup = data_read.lookup_exact(new_page.tags.clone());
+            let lookup =
+                data_read.lookup_exact(new_page.tags.clone());
 
             if lookup != data::LookupOutcome::None {
                 return Ok(HttpResponse::Conflict().body("{}"));
@@ -177,7 +191,9 @@ struct PutResponse {
 
 fn put(
     req: HttpRequest<State>,
-) -> UserResult<Box<Future<Item = HttpResponse, Error = error::Error>>> {
+) -> UserResult<
+    Box<Future<Item = HttpResponse, Error = error::Error>>,
+> {
     assert_is_authorized(&req)?;
     let cur_url = req.path().to_owned();
     let data = req.state().data.clone();
@@ -194,19 +210,27 @@ fn put(
             let data_read = data.read();
             let page_id = data_read.lookup(url_tags)?;
 
-            let new_page = Page::from_markdown(input.text.clone());
+            let new_page =
+                Page::from_markdown(input.text.clone());
 
-            let lookup = data_read.lookup_exact(new_page.tags.clone());
+            let lookup =
+                data_read.lookup_exact(new_page.tags.clone());
 
             if lookup == data::LookupOutcome::Many {
                 return Ok(HttpResponse::Conflict().body("{}"));
             } else if let data::LookupOutcome::One(id) = lookup {
                 if id != page_id {
-                    return Ok(HttpResponse::Conflict().body("{}"));
+                    return Ok(
+                        HttpResponse::Conflict().body("{}")
+                    );
                 }
             }
 
-            let existing_path = data_read.path_by_id.get(&page_id).unwrap().clone();
+            let existing_path = data_read
+                .path_by_id
+                .get(&page_id)
+                .unwrap()
+                .clone();
 
             drop(data_read);
 
@@ -232,32 +256,33 @@ fn get_index(
 ) -> Result<HttpResponse> {
     let mut pages: Vec<_> = page_ids
         .iter()
-        .map(|page_id| data.pages_by_id.get(&page_id).unwrap().clone())
+        .map(|page_id| {
+            data.pages_by_id.get(&page_id).unwrap().clone()
+        })
         .collect();
     pages.sort_by(|n, m| n.title.cmp(&m.title));
-    let body = tpl::render(
-        &tpl::index_tpl(),
-        &tpl::index::Data {
-            base: tpl::base::Data {
-                title: if match_.matching_tags.is_empty() {
-                    config::WIKI_NAME_TEXT.into()
-                } else {
-                    match_.matching_tags.join("/")
-                },
-                is_logged_in: is_logged_in(req)?,
+    let body = tpl::index::page(&tpl::index::Data {
+        base: tpl::base::Data {
+            title: if match_.matching_tags.is_empty() {
+                req.state().site_settings.short_name.clone()
+            } else {
+                match_.matching_tags.join("/")
             },
-            pages: pages,
-            cur_url: cur_url.into(),
-            narrowing_tags: match_.narrowing_tags.clone(),
-            matching_tags: match_.matching_tags.clone(),
+            site_settings: &req.state().site_settings,
+            is_logged_in: is_logged_in(req)?,
         },
-    );
+        pages: pages,
+        cur_url: cur_url.into(),
+        narrowing_tags: match_.narrowing_tags.clone(),
+        matching_tags: match_.matching_tags.clone(),
+    });
 
-    Ok(HttpResponse::Ok().body(body))
+    Ok(HttpResponse::Ok().body(body.render_to_vec()))
 }
 
 fn url_to_tags(url: &str) -> (Vec<String>, bool) {
-    let mut tags: Vec<_> = url.split("/").skip(1).map(Into::into).collect();
+    let mut tags: Vec<_> =
+        url.split("/").skip(1).map(Into::into).collect();
 
     let prefer_exact = if tags.last() == Some(&"".into()) {
         tags.pop();
@@ -274,7 +299,9 @@ struct SearchQuery {
     q: String,
 }
 
-fn search_get(query: Query<SearchQuery>) -> Result<HttpResponse> {
+fn search_get(
+    query: Query<SearchQuery>,
+) -> Result<HttpResponse> {
     let tags: Vec<String> = query
         .q
         .trim()
@@ -287,7 +314,9 @@ fn search_get(query: Query<SearchQuery>) -> Result<HttpResponse> {
     ))
 }
 
-fn search_post(query: Form<SearchQuery>) -> Result<HttpResponse> {
+fn search_post(
+    query: Form<SearchQuery>,
+) -> Result<HttpResponse> {
     let tags: Vec<String> = query
         .q
         .trim()
@@ -304,17 +333,15 @@ fn new_page(req: HttpRequest<State>) -> Result<HttpResponse> {
     assert_is_authorized(&req)?;
     let cur_url = req.path();
 
-    let body = tpl::render(
-        &tpl::new_tpl(),
-        &tpl::new::Data {
-            base: tpl::base::Data {
-                title: "New post".into(),
-                is_logged_in: is_logged_in(&req)?,
-            },
-            cur_url: cur_url.into(),
+    let body = tpl::new::page(&tpl::new::Data {
+        base: tpl::base::Data {
+            title: "New post".into(),
+            is_logged_in: is_logged_in(&req)?,
+            site_settings: &req.state().site_settings,
         },
-    );
-    Ok(HttpResponse::Ok().body(body))
+        cur_url: cur_url.into(),
+    });
+    Ok(HttpResponse::Ok().body(body.render_to_vec()))
 }
 
 fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
@@ -322,36 +349,47 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
     let (tags, prefer_exact) = url_to_tags(cur_url);
     let data = req.state().data.read();
 
-    let match_ = data.find_best_match(tags.clone(), prefer_exact);
+    let match_ =
+        data.find_best_match(tags.clone(), prefer_exact);
 
     if match_.has_unmatched_tags() {
-        return Ok(redirect_to(match_.to_precise_url(prefer_exact).as_str()));
+        return Ok(redirect_to(
+            match_.to_precise_url(prefer_exact).as_str(),
+        ));
     }
 
     match match_.type_ {
         MatchType::One(page_id) => {
             let page = data.pages_by_id.get(&page_id).unwrap();
-            if match_.is_one() && match_.matching_tags.len() < page.tags.len() {
-                return Ok(redirect_to(page.to_full_url(prefer_exact).as_str()));
+            if match_.is_one()
+                && match_.matching_tags.len() < page.tags.len()
+            {
+                return Ok(redirect_to(
+                    page.to_full_url(prefer_exact).as_str(),
+                ));
             }
-            let body = tpl::render(
-                &tpl::view_tpl(),
-                &tpl::view::Data {
-                    base: tpl::base::Data {
-                        title: page.title.clone(),
-                        is_logged_in: is_logged_in(&req)?,
-                    },
-                    page: page.clone(),
-                    cur_url: cur_url.into(),
-                    narrowing_tags: match_.narrowing_tags,
+            let body = tpl::view::page(&tpl::view::Data {
+                base: tpl::base::Data {
+                    title: page.title.clone(),
+                    is_logged_in: is_logged_in(&req)?,
+                    site_settings: &req.state().site_settings,
                 },
-            );
-            Ok(HttpResponse::Ok().body(body))
+                page: page.clone(),
+                cur_url: cur_url.into(),
+                narrowing_tags: match_.narrowing_tags,
+            });
+            Ok(HttpResponse::Ok().body(body.render_to_vec()))
         }
-        MatchType::Many(ref page_ids) => {
-            get_index(&req, &match_, cur_url, page_ids.as_slice(), &*data)
+        MatchType::Many(ref page_ids) => get_index(
+            &req,
+            &match_,
+            cur_url,
+            page_ids.as_slice(),
+            &*data,
+        ),
+        MatchType::None => {
+            Ok(HttpResponse::Ok().body(format!("Not Found :(")))
         }
-        MatchType::None => Ok(HttpResponse::Ok().body(format!("Not Found :("))),
     }
 }
 
@@ -359,17 +397,25 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
 struct State {
     data: data::SyncState,
     opts: Opts,
+    site_settings: Arc<SiteSettings>,
 }
 
 struct Logger;
 
 impl<S> Middleware<S> for Logger {
-    fn start(&self, req: &mut HttpRequest<S>) -> Result<Started> {
+    fn start(
+        &self,
+        req: &mut HttpRequest<S>,
+    ) -> Result<Started> {
         println!("{} {}", req.method(), req.path());
         Ok(Started::Done)
     }
 
-    fn finish(&self, _req: &mut HttpRequest<S>, _resp: &HttpResponse) -> Finished {
+    fn finish(
+        &self,
+        _req: &mut HttpRequest<S>,
+        _resp: &HttpResponse,
+    ) -> Finished {
         Finished::Done
     }
 }
@@ -378,6 +424,7 @@ pub fn start(data: data::SyncState, opts: Opts) {
     let state = State {
         data: data,
         opts: opts.clone(),
+        site_settings: Default::default(),
     };
 
     let mut listenfd = listenfd::ListenFd::from_env();
@@ -387,7 +434,8 @@ pub fn start(data: data::SyncState, opts: Opts) {
             .middleware(Logger)
             .middleware(SessionStorage::new(
                 // TODO
-                CookieSessionBackend::signed(&[0; 32]).secure(false),
+                CookieSessionBackend::signed(&[0; 32])
+                    .secure(false),
             ))
             .route("/~login", http::Method::GET, login_get)
             .route("/~login", http::Method::POST, login_post)
@@ -395,7 +443,10 @@ pub fn start(data: data::SyncState, opts: Opts) {
             .route("/~search", http::Method::GET, search_get)
             .route("/~search", http::Method::POST, search_post)
             .route("/~new", http::Method::GET, new_page)
-            .handler("/~theme", fs::StaticFiles::new(opts.theme_dir.clone()))
+            .handler(
+                "/~theme",
+                fs::StaticFiles::new(opts.theme_dir.clone()),
+            )
             .default_resource(|r| {
                 r.get().f(get);
                 r.post().f(post);
