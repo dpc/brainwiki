@@ -2,10 +2,10 @@ use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt, Clone)]
-enum Command {
-    #[structopt(name = "gen")]
-    /// Generate
-    Generate,
+pub enum Command {
+    #[structopt(name = "passwd")]
+    /// Set password
+    Password,
 }
 
 #[derive(Debug, StructOpt, Clone)]
@@ -14,23 +14,23 @@ enum Command {
 )]
 pub struct Opts {
     #[structopt(
-        long = "datadir",
+        long = "data-dir",
         short = "d",
         parse(from_os_str),
         default_value = "./data"
     )]
     pub data_dir: PathBuf,
     #[structopt(
-        long = "theme_dir",
+        long = "theme-dir",
         parse(from_os_str),
         default_value = "./theme"
     )]
     pub theme_dir: PathBuf,
 
     #[structopt(subcommand)]
-    command: Option<Command>,
+    pub command: Option<Command>,
     /// Run locally - no password needed for editing
-    local: bool,
+    pub local: bool,
     //    #[structopt(flatten)]
     //    verbosity: Verbosity,
 }

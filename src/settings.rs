@@ -1,14 +1,9 @@
 use crate::Result;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[derive(Deserialize, Serialize, Debug)]
-pub struct PasswordSettings {
-    pub hash: String,
-    pub seed: String,
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-pub struct SiteSettings {
+pub struct Site {
+    pub version: u32,
     #[serde(default)]
     pub footer: String,
     #[serde(default)]
@@ -16,34 +11,50 @@ pub struct SiteSettings {
     #[serde(default)]
     pub author: String,
     #[serde(default)]
-    pub password: Option<PasswordSettings>,
+    pub hashed_password: Option<String>,
 }
 
-impl Default for SiteSettings {
+impl Default for Site {
     fn default() -> Self {
-        SiteSettings {
+        Site {
             footer: "Powered by <a href=\"http://github.com/dpc/brainwiki\">BrainWiki</a>".into(),
             short_name: "BrainWiki".into(),
             author: "".into(),
-            password: None
+            hashed_password: None,
+            version: 0,
         }
     }
 }
 
-impl SiteSettings {
-    pub fn load_or_create_in(dir: &Path) -> Result<Self> {
-        let file_path = dir.join("config.toml");
-
-        if let Ok(s) = Self::load_from(&file_path) {
-            return Ok(s);
-        }
-
-        Ok(Default::default())
+impl Site {
+    pub fn dir_to_file(dir: &Path) -> PathBuf {
+        dir.join("config.toml")
     }
 
-    pub fn load_from(path: &Path) -> Result<Self> {
-        let content = file::get(path.join("config.yaml"))?;
+    pub fn load_from_dir(dir: &Path) -> Result<Self> {
+        let file_path = Self::dir_to_file(dir);
+
+        if file_path.exists() {
+            Self::load_from(&file_path).into()
+        } else {
+            Ok(Default::default())
+        }
+    }
+
+    pub fn load_from(file_path: &Path) -> Result<Self> {
+        let content = file::get(file_path)?;
 
         Ok(toml::from_slice(&content)?)
+    }
+
+    pub fn set_password(&mut self, cleartext: String) {
+        self.hashed_password =
+            Some(libpasta::hash_password(cleartext));
+    }
+
+    pub fn write_to_dir(&self, dir: &Path) -> Result<()> {
+        let file_path = Self::dir_to_file(dir);
+        file::put(file_path, toml::to_vec(&self)?)?;
+        Ok(())
     }
 }

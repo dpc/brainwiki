@@ -74,11 +74,32 @@ use structopt::StructOpt;
 
 type Result<T> = std::result::Result<T, failure::Error>;
 
+fn read_passwd() -> Result<String> {
+    loop {
+        let pass =
+            rpassword::prompt_password_stderr("Password: ")?;
+        let pass2 = rpassword::prompt_password_stderr(
+            "Password (repeat): ",
+        )?;
+        if pass == pass2 {
+            break Ok(pass);
+        } else {
+            eprintln!("Passwords don't match");
+        }
+    }
+}
 //main!(|args: opts::Opts, log_level: verbosity| {
 main!(|opts: opts::Opts| {
-    let settings = settings::SiteSettings::load_or_create_in(
-        &opts.data_dir,
-    )?;
+    let mut settings =
+        settings::Site::load_from_dir(&opts.data_dir)?;
+
+    if let Some(opts::Command::Password) = opts.command {
+        let pass = read_passwd()?;
+
+        settings.set_password(pass);
+        settings.write_to_dir(&opts.data_dir)?;
+        return Ok(());
+    }
 
     let state = data::SyncState::new();
 
@@ -89,5 +110,5 @@ main!(|opts: opts::Opts| {
 
     state.write().insert_from_dir(&opts.data_dir).unwrap();
 
-    web::start(state, opts);
+    web::start(state, settings, opts);
 });

@@ -1,5 +1,5 @@
 use super::misc::*;
-use crate::settings::SiteSettings;
+use crate::settings::Site;
 use stpl::{html::*, Render};
 
 use boolinator::Boolinator;
@@ -7,8 +7,9 @@ use boolinator::Boolinator;
 #[derive(Clone, Debug)]
 pub struct Data<'a> {
     pub title: String,
-    pub is_logged_in: bool,
-    pub site_settings: &'a SiteSettings,
+    pub can_edit: bool,
+    pub can_login: bool,
+    pub site_settings: &'a Site,
 }
 
 pub fn search_form(_data: &Data) -> impl Render {
@@ -69,9 +70,9 @@ pub fn navbar(
             } else {
                 None
             }),)),
-            data.is_logged_in.as_some(buttons),
+            data.can_edit.as_some(buttons),
             search_form(data),
-            data.is_logged_in
+            (data.can_edit && data.can_login)
                 .as_some(form.action("/~logout").method("post")(button
                     .name("logout-button")
                     .id("logout-button")
@@ -79,7 +80,7 @@ pub fn navbar(
                     .value("logout")(
                     "Logout"
                 ))),
-            (!data.is_logged_in).as_some(a
+            (!data.can_edit && data.can_login).as_some(a
                 .id("login-button")
                 .class("btn btn-outline-success mx-1")
                 .href("/~login")("Login")),
@@ -87,7 +88,7 @@ pub fn navbar(
     )),)),)
 }
 
-pub fn my_footer(site_settings: &SiteSettings) -> impl Render {
+pub fn my_footer(site_settings: &Site) -> impl Render {
     footer.id("footer").class("container py-1 my-1")((row(div
         .class("col text-center mx-1 px-4")(
         span(site_settings.footer.clone()),

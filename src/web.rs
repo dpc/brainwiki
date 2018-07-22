@@ -26,13 +26,11 @@ use actix_web::{
     HttpRequest, HttpResponse, Query, Result,
 };
 
-use crate::settings::SiteSettings;
+use crate::settings::Site;
 use std::sync::Arc;
 use stpl::html::RenderExt;
 
 const LOGGED_IN_COOKIE_NAME: &str = "logged_in";
-//TODO
-const LOGIN_PASSWORD: &str = "password";
 
 use futures::Future;
 
@@ -61,21 +59,36 @@ impl error::ResponseError for UserError {
     }
 }
 
-fn is_logged_in(req: &HttpRequest<State>) -> Result<bool> {
-    Ok(req
+fn can_edit(req: &HttpRequest<State>) -> Result<bool> {
+    let local = req.state().opts.local;
+    let logged_in = req
         .session()
         .get::<bool>(LOGGED_IN_COOKIE_NAME)?
-        .unwrap_or(false))
+        .unwrap_or(false);
+    Ok(local || logged_in)
+}
+
+fn can_login(req: &HttpRequest<State>) -> bool {
+    let local = req.state().opts.local;
+    let password_set =
+        req.state().site_settings.hashed_password.is_some();
+
+    !local && password_set
 }
 
 fn login_get(req: HttpRequest<State>) -> Result<HttpResponse> {
     let cur_url = req.path();
+
+    let hashed_password =
+        req.state().site_settings.hashed_password.clone();
+    let local = req.state().opts.local;
+
+    if local || hashed_password.is_none() {
+        return Ok(redirect_to_303("/"));
+    }
+    let base = tpl::base::Data::from(&req);
     let body = tpl::login::page(&tpl::login::Data {
-        base: tpl::base::Data {
-            title: req.state().site_settings.short_name.clone(),
-            site_settings: &req.state().site_settings,
-            is_logged_in: is_logged_in(&req)?,
-        },
+        base: base,
         cur_url: cur_url.into(),
     });
     Ok(HttpResponse::Ok().body(body.render_to_vec()))
@@ -89,9 +102,18 @@ struct PasswordForm {
 fn login_post(
     req: HttpRequest<State>,
 ) -> Box<Future<Item = HttpResponse, Error = error::Error>> {
+    let hashed_password =
+        req.state().site_settings.hashed_password.clone();
+    let local = req.state().opts.local;
+
     Form::<PasswordForm>::extract(&req)
         .and_then(move |form| {
-            if form.password == LOGIN_PASSWORD {
+            if local || hashed_password.is_none() {
+                Ok(redirect_to_303("/"))
+            } else if libpasta::verify_password(
+                &hashed_password.unwrap(),
+                form.password.clone(),
+            ) {
                 req.session().set(LOGGED_IN_COOKIE_NAME, true)?;
                 Ok(redirect_to_303("/"))
             } else {
@@ -261,16 +283,15 @@ fn get_index(
         })
         .collect();
     pages.sort_by(|n, m| n.title.cmp(&m.title));
+    let mut base = tpl::base::Data::from(req);
+
+    base.title = if match_.matching_tags.is_empty() {
+        req.state().site_settings.short_name.clone()
+    } else {
+        match_.matching_tags.join("/")
+    };
     let body = tpl::index::page(&tpl::index::Data {
-        base: tpl::base::Data {
-            title: if match_.matching_tags.is_empty() {
-                req.state().site_settings.short_name.clone()
-            } else {
-                match_.matching_tags.join("/")
-            },
-            site_settings: &req.state().site_settings,
-            is_logged_in: is_logged_in(req)?,
-        },
+        base: base,
         pages: pages,
         cur_url: cur_url.into(),
         narrowing_tags: match_.narrowing_tags.clone(),
@@ -333,12 +354,10 @@ fn new_page(req: HttpRequest<State>) -> Result<HttpResponse> {
     assert_is_authorized(&req)?;
     let cur_url = req.path();
 
+    let mut base = tpl::base::Data::from(&req);
+    base.title = "New post".into();
     let body = tpl::new::page(&tpl::new::Data {
-        base: tpl::base::Data {
-            title: "New post".into(),
-            is_logged_in: is_logged_in(&req)?,
-            site_settings: &req.state().site_settings,
-        },
+        base: base,
         cur_url: cur_url.into(),
     });
     Ok(HttpResponse::Ok().body(body.render_to_vec()))
@@ -368,12 +387,10 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
                     page.to_full_url(prefer_exact).as_str(),
                 ));
             }
+            let mut base = tpl::base::Data::from(&req);
+            base.title = page.title.clone();
             let body = tpl::view::page(&tpl::view::Data {
-                base: tpl::base::Data {
-                    title: page.title.clone(),
-                    is_logged_in: is_logged_in(&req)?,
-                    site_settings: &req.state().site_settings,
-                },
+                base: base,
                 page: page.clone(),
                 cur_url: cur_url.into(),
                 narrowing_tags: match_.narrowing_tags,
@@ -397,7 +414,7 @@ fn get(req: HttpRequest<State>) -> Result<HttpResponse> {
 struct State {
     data: data::SyncState,
     opts: Opts,
-    site_settings: Arc<SiteSettings>,
+    site_settings: Arc<Site>,
 }
 
 struct Logger;
@@ -420,11 +437,28 @@ impl<S> Middleware<S> for Logger {
     }
 }
 
-pub fn start(data: data::SyncState, opts: Opts) {
+impl<'a> From<&'a HttpRequest<State>>
+    for crate::tpl::base::Data<'a>
+{
+    fn from(req: &'a HttpRequest<State>) -> Self {
+        Self {
+            title: req.state().site_settings.short_name.clone(),
+            site_settings: &req.state().site_settings,
+            can_edit: can_edit(req).unwrap_or(false),
+            can_login: can_login(req),
+        }
+    }
+}
+
+pub fn start(
+    data: data::SyncState,
+    site_settings: Site,
+    opts: Opts,
+) {
     let state = State {
         data: data,
         opts: opts.clone(),
-        site_settings: Default::default(),
+        site_settings: Arc::new(site_settings),
     };
 
     let mut listenfd = listenfd::ListenFd::from_env();

@@ -1,17 +1,29 @@
-use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::{sync, thread};
+use std::{
+    collections::{HashMap, HashSet},
+    fs,
+    path::{Path, PathBuf},
+    sync, thread,
+};
 
-use notify::{DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher};
-use std::fs::File;
-use std::io::Write;
-use std::time::Duration;
+use notify::{
+    DebouncedEvent, RecommendedWatcher, RecursiveMode, Watcher,
+};
+use std::{fs::File, io::Write, time::Duration};
 
-use crate::page::Page;
-use crate::Result;
+use crate::{page::Page, Result};
 
-#[derive(From, Into, Eq, PartialEq, Hash, Default, Debug, Clone, Copy, AddAssign)]
+#[derive(
+    From,
+    Into,
+    Eq,
+    PartialEq,
+    Hash,
+    Default,
+    Debug,
+    Clone,
+    Copy,
+    AddAssign,
+)]
 pub struct PageId(u32);
 pub type NarrowingTagsSet = HashMap<String, usize>;
 
@@ -61,7 +73,8 @@ impl Match {
     }
 
     pub fn to_precise_url(&self, prefer_exact: bool) -> String {
-        let mut location = String::from("/") + self.matching_tags.join("/").as_str();
+        let mut location = String::from("/")
+            + self.matching_tags.join("/").as_str();
         if !prefer_exact {
             location += "/";
         }
@@ -89,18 +102,27 @@ impl State {
         Default::default()
     }
 
-    pub fn insert_from_dir(&mut self, dir_path: &Path) -> Result<()> {
+    pub fn insert_from_dir(
+        &mut self,
+        dir_path: &Path,
+    ) -> Result<()> {
         for entry in fs::read_dir(dir_path)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() {
+            if path.is_file()
+                || path.extension().and_then(|e| e.to_str())
+                    == Some("md")
+            {
                 self.insert_from_file(&path)?;
             }
         }
         Ok(())
     }
 
-    pub fn insert_from_file(&mut self, md_path: &Path) -> Result<()> {
+    pub fn insert_from_file(
+        &mut self,
+        md_path: &Path,
+    ) -> Result<()> {
         let page = Page::read_from_file(md_path)?;
 
         self.insert(page, &md_path.canonicalize()?);
@@ -149,7 +171,10 @@ impl State {
         }
     }
 
-    pub fn lookup_exact(&self, tags: Vec<String>) -> LookupOutcome {
+    pub fn lookup_exact(
+        &self,
+        tags: Vec<String>,
+    ) -> LookupOutcome {
         let mut matches: Option<HashSet<PageId>> = None;
         for tag in tags.iter().cloned() {
             if let Some(set) = self.tag_sets.get(&tag) {
@@ -169,15 +194,22 @@ impl State {
                 return LookupOutcome::None;
             }
         }
-        let matches = matches.as_ref().unwrap_or(&self.all_pages);
+        let matches =
+            matches.as_ref().unwrap_or(&self.all_pages);
         match matches.len() {
             0 => LookupOutcome::None,
-            1 => LookupOutcome::One(*matches.into_iter().next().unwrap()),
+            1 => LookupOutcome::One(
+                *matches.into_iter().next().unwrap(),
+            ),
             _ => LookupOutcome::Many,
         }
     }
 
-    pub fn find_best_match(&self, tags: Vec<String>, prefer_exact: bool) -> Match {
+    pub fn find_best_match(
+        &self,
+        tags: Vec<String>,
+        prefer_exact: bool,
+    ) -> Match {
         let mut matches: Option<HashSet<PageId>> = None;
         let mut matching_tags = vec![];
         let mut unmatched_tags = vec![];
@@ -221,9 +253,13 @@ impl State {
         let mut narrowing_tags = HashMap::new();
 
         for page_id in &matches {
-            for tag in &self.pages_by_id.get(&page_id).unwrap().tags {
+            for tag in
+                &self.pages_by_id.get(&page_id).unwrap().tags
+            {
                 if !matching_tags.contains(&tag) {
-                    *narrowing_tags.entry(tag.clone()).or_insert(0) += 1;
+                    *narrowing_tags
+                        .entry(tag.clone())
+                        .or_insert(0) += 1;
                 }
             }
         }
@@ -235,7 +271,8 @@ impl State {
             type_: match matches.len() {
                 0 => MatchType::None,
                 1 => {
-                    let page_id = matches.into_iter().next().unwrap();
+                    let page_id =
+                        matches.into_iter().next().unwrap();
                     MatchType::One(page_id)
                 }
                 _ => {
@@ -248,7 +285,9 @@ impl State {
                                     .unwrap()
                                     .tags
                                     .iter()
-                                    .all(|tag| tags.contains(&tag))
+                                    .all(|tag| {
+                                        tags.contains(&tag)
+                                    })
                             })
                             .cloned();
                         if let Some(id) = id {
@@ -273,22 +312,34 @@ pub struct SyncState {
 impl SyncState {
     pub fn new() -> Self {
         SyncState {
-            inner: sync::Arc::new(sync::RwLock::new(State::new())),
+            inner: sync::Arc::new(sync::RwLock::new(
+                State::new(),
+            )),
         }
     }
-    pub fn write<'a>(&'a self) -> sync::RwLockWriteGuard<'a, State> {
+    pub fn write<'a>(
+        &'a self,
+    ) -> sync::RwLockWriteGuard<'a, State> {
         self.inner.write().unwrap()
     }
-    pub fn read<'a>(&'a self) -> sync::RwLockReadGuard<'a, State> {
+    pub fn read<'a>(
+        &'a self,
+    ) -> sync::RwLockReadGuard<'a, State> {
         self.inner.read().unwrap()
     }
 
-    pub fn write_new_file(&self, page: &Page, data_dir: &Path) -> Result<()> {
+    pub fn write_new_file(
+        &self,
+        page: &Page,
+        data_dir: &Path,
+    ) -> Result<()> {
         let mut path_text = page.suggested_filename();
 
         println!("{}", path_text);
         let (mut tmp_file, tmp_file_path, dst_path) = loop {
-            let dst_path = data_dir.join(path_text.clone()).with_extension("md");
+            let dst_path = data_dir
+                .join(path_text.clone())
+                .with_extension("md");
             if dst_path.exists() {
                 path_text += "_";
                 continue;
@@ -297,12 +348,16 @@ impl SyncState {
             let tmp_file_path = dst_path.with_extension("tmp");
             let res = File::create(tmp_file_path.clone());
             match res {
-                Err(e) => if e.kind() == ::std::io::ErrorKind::AlreadyExists {
+                Err(e) => if e.kind()
+                    == ::std::io::ErrorKind::AlreadyExists
+                {
                     path_text += "_";
                 } else {
                     Err(e)?;
                 },
-                Ok(file) => break (file, tmp_file_path, dst_path),
+                Ok(file) => {
+                    break (file, tmp_file_path, dst_path)
+                }
             }
         };
         tmp_file.write_all(page.md.as_bytes())?;
@@ -314,7 +369,11 @@ impl SyncState {
         Ok(())
     }
 
-    pub fn replace_file(&self, path: &Path, page: &Page) -> Result<()> {
+    pub fn replace_file(
+        &self,
+        path: &Path,
+        page: &Page,
+    ) -> Result<()> {
         // TODO: randomize
         let tmp_file_path = path.with_extension(".tmp");
         let mut tmp_file = File::create(tmp_file_path.clone())?;
@@ -331,7 +390,9 @@ impl SyncState {
         let new_page = Page::read_from_file(&*path)?;
 
         let mut inner = self.inner.write().unwrap();
-        if let Some(id) = inner.pages_by_path.get(path.as_path()).cloned() {
+        if let Some(id) =
+            inner.pages_by_path.get(path.as_path()).cloned()
+        {
             inner.remove(id);
         }
         inner.insert(new_page, &path.canonicalize()?);
@@ -341,20 +402,30 @@ impl SyncState {
 
     fn handle_remove(&self, path: PathBuf) -> Result<()> {
         let mut inner = self.inner.write().unwrap();
-        if let Some(id) = inner.pages_by_path.get(path.as_path()).cloned() {
+        if let Some(id) =
+            inner.pages_by_path.get(path.as_path()).cloned()
+        {
             inner.remove(id);
         }
 
         Ok(())
     }
-    fn handle_rename(&self, src: PathBuf, dst: PathBuf) -> Result<()> {
+    fn handle_rename(
+        &self,
+        src: PathBuf,
+        dst: PathBuf,
+    ) -> Result<()> {
         let new_page = Page::read_from_file(&*dst)?;
 
         let mut inner = self.inner.write().unwrap();
-        if let Some(id) = inner.pages_by_path.get(dst.as_path()).cloned() {
+        if let Some(id) =
+            inner.pages_by_path.get(dst.as_path()).cloned()
+        {
             inner.remove(id);
         }
-        if let Some(id) = inner.pages_by_path.get(src.as_path()).cloned() {
+        if let Some(id) =
+            inner.pages_by_path.get(src.as_path()).cloned()
+        {
             inner.remove(id);
         }
         inner.insert(new_page, &dst.canonicalize()?);
@@ -371,7 +442,8 @@ pub struct FsWatcher {
 impl FsWatcher {
     pub fn new(dir: PathBuf, state: SyncState) -> Result<Self> {
         let (tx, rx) = sync::mpsc::channel();
-        let mut watcher: RecommendedWatcher = Watcher::new(tx, Duration::from_millis(10))?;
+        let mut watcher: RecommendedWatcher =
+            Watcher::new(tx, Duration::from_millis(10))?;
 
         watcher.watch(dir, RecursiveMode::Recursive)?;
 
@@ -382,17 +454,29 @@ impl FsWatcher {
                 println!("{:?}", event);
                 match event {
                     DebouncedEvent::Create(path) => {
-                        if path.extension().and_then(|e| e.to_str()) == Some("md") {
+                        if path
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            == Some("md")
+                        {
                             let _ = state.handle_create(path)?;
                         }
                     }
                     DebouncedEvent::Remove(path) => {
-                        if path.extension().and_then(|e| e.to_str()) == Some("md") {
+                        if path
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            == Some("md")
+                        {
                             let _ = state.handle_remove(path)?;
                         }
                     }
                     DebouncedEvent::Rename(src, dst) => {
-                        if dst.extension().and_then(|e| e.to_str()) == Some("md") {
+                        if dst
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            == Some("md")
+                        {
                             state.handle_rename(src, dst)?;
                         }
                     }
@@ -460,18 +544,27 @@ fn simple() {
     let tags = vec!["a".into(), "b".into()];
     let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_one());
-    assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(
+        m.matching_tags,
+        vec!["a".to_string(), "b".into()]
+    );
     assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".into(), "b".into()];
     let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_one());
-    assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(
+        m.matching_tags,
+        vec!["a".to_string(), "b".into()]
+    );
     assert_eq!(m.unmatched_tags, empty);
 
     let tags = vec!["a".to_string(), "x".into(), "b".into()];
     let m = state.find_best_match(tags.clone(), false);
     assert!(m.is_one());
-    assert_eq!(m.matching_tags, vec!["a".to_string(), "b".into()]);
+    assert_eq!(
+        m.matching_tags,
+        vec!["a".to_string(), "b".into()]
+    );
     assert_eq!(m.unmatched_tags, vec!["x".to_string()]);
 }

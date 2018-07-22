@@ -12,7 +12,7 @@ name = "brainwiki"
 path = "src/main.rs"
 
 [dependencies]
-actix-web = "*"
+actix-web = "0.6"
 boolinator = "*"
 bytes = "*"
 chrono = "*"
@@ -33,6 +33,9 @@ quicli = "0.3"
 log = "*"
 file = "*"
 toml = "*"
+hex = "*"
+rpassword = "*"
+libpasta = "*"
 
 [dependencies.stpl]
 git = "http://github.com/dpc/stpl"
