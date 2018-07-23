@@ -35,6 +35,8 @@ file = "*"
 toml = "*"
 rpassword = "*"
 libpasta = "*"
+ring = "*"
+hex = "*"
 
 [dependencies.stpl]
 git = "http://github.com/dpc/stpl"

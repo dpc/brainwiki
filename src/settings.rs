@@ -1,7 +1,9 @@
 use crate::Result;
 use std::path::{Path, PathBuf};
 
-#[derive(Deserialize, Serialize, Debug)]
+use crate::util::{deserialize_as_hex, serialize_as_hex};
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Site {
     pub version: u32,
     #[serde(default)]
@@ -12,8 +14,21 @@ pub struct Site {
     pub author: String,
     #[serde(default)]
     pub hashed_password: Option<String>,
+    #[serde(
+        default = "rand_salt",
+        serialize_with = "serialize_as_hex",
+        deserialize_with = "deserialize_as_hex"
+    )]
+    pub web_salt: Vec<u8>,
 }
 
+fn rand_salt() -> Vec<u8> {
+    use ring::rand::SecureRandom;
+    let mut salt = vec![1u8; 32];
+    ring::rand::SystemRandom::new().fill(&mut salt).unwrap();
+
+    salt
+}
 impl Default for Site {
     fn default() -> Self {
         Site {
@@ -22,6 +37,7 @@ impl Default for Site {
             author: "".into(),
             hashed_password: None,
             version: 0,
+            web_salt: rand_salt(),
         }
     }
 }

@@ -492,7 +492,7 @@ pub fn start(
     let state = State {
         data: data,
         opts: opts.clone(),
-        site_settings: Arc::new(site_settings),
+        site_settings: Arc::new(site_settings.clone()),
     };
 
     let mut listenfd = listenfd::ListenFd::from_env();
@@ -502,8 +502,9 @@ pub fn start(
             .middleware(Logger)
             .middleware(SessionStorage::new(
                 // TODO
-                CookieSessionBackend::signed(&[0; 32])
-                    .secure(false),
+                CookieSessionBackend::signed(
+                    &site_settings.web_salt,
+                ).secure(false),
             ))
             .route("/~login", http::Method::GET, login_get)
             .route("/~login", http::Method::POST, login_post)

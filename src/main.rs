@@ -68,6 +68,7 @@ mod opts;
 mod page;
 mod settings;
 mod tpl;
+mod util;
 mod web;
 
 use structopt::StructOpt;
