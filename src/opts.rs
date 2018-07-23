@@ -20,12 +20,8 @@ pub struct Opts {
         default_value = "./data"
     )]
     pub data_dir: PathBuf,
-    #[structopt(
-        long = "theme-dir",
-        parse(from_os_str),
-        default_value = "./theme"
-    )]
-    pub theme_dir: PathBuf,
+    #[structopt(long = "theme-dir", parse(from_os_str),)]
+    pub theme_dir: Option<PathBuf>,
 
     #[structopt(subcommand)]
     pub command: Option<Command>,

@@ -15,7 +15,8 @@
 // ANY /~... other special stuff
 
 use actix_web::{
-    error, fs, http,
+    error, fs,
+    http::{self, StatusCode},
     middleware::{
         session::{
             CookieSessionBackend, RequestSession, SessionStorage,
@@ -23,7 +24,7 @@ use actix_web::{
         Finished, Middleware, Started,
     },
     server, App, AsyncResponder, Form, FromRequest, HttpMessage,
-    HttpRequest, HttpResponse, Query, Result,
+    HttpRequest, HttpResponse, Query, Responder, Result,
 };
 
 use crate::settings::Site;
@@ -74,6 +75,31 @@ fn can_login(req: &HttpRequest<State>) -> bool {
         req.state().site_settings.hashed_password.is_some();
 
     !local && password_set
+}
+
+const BOOTSTRAP_MIN_CSS: &[u8] =
+    include_bytes!("../theme/bootstrap.min.css");
+const CUSTOM_CSS: &[u8] = include_bytes!("../theme/custom.css");
+const FAVICON_ICO: &[u8] =
+    include_bytes!("../theme/favicon.ico");
+
+fn theme_get(req: HttpRequest<State>) -> impl Responder {
+    let name = req.match_info().get("name").unwrap_or("");
+
+    match name {
+        "bootstrap.min.css" => {
+            HttpResponse::build(StatusCode::OK)
+                .content_type("text/css; charset=utf-8")
+                .body(BOOTSTRAP_MIN_CSS)
+        }
+        "custom.css" => HttpResponse::build(StatusCode::OK)
+            .content_type("text/css; charset=utf-8")
+            .body(CUSTOM_CSS),
+        "favicon.ico" => FAVICON_ICO.into(),
+        _ => {
+            return HttpResponse::new(http::StatusCode::NOT_FOUND)
+        }
+    }
 }
 
 fn login_get(req: HttpRequest<State>) -> Result<HttpResponse> {
@@ -464,7 +490,7 @@ pub fn start(
     let mut listenfd = listenfd::ListenFd::from_env();
 
     let server = server::new(move || {
-        App::with_state(state.clone())
+        let app = App::with_state(state.clone())
             .middleware(Logger)
             .middleware(SessionStorage::new(
                 // TODO
@@ -476,16 +502,21 @@ pub fn start(
             .route("/~logout", http::Method::POST, logout)
             .route("/~search", http::Method::GET, search_get)
             .route("/~search", http::Method::POST, search_post)
-            .route("/~new", http::Method::GET, new_page)
-            .handler(
-                "/~theme",
-                fs::StaticFiles::new(opts.theme_dir.clone()),
+            .route("/~new", http::Method::GET, new_page);
+        let app = if let Some(dir) = opts.theme_dir.clone() {
+            app.handler("/~theme", fs::StaticFiles::new(dir))
+        } else {
+            app.route(
+                "/~theme/{name}",
+                http::Method::GET,
+                theme_get,
             )
-            .default_resource(|r| {
-                r.get().f(get);
-                r.post().f(post);
-                r.put().f(put);
-            })
+        };
+        app.default_resource(|r| {
+            r.get().f(get);
+            r.post().f(post);
+            r.put().f(put);
+        })
     });
     if let Some(l) = listenfd.take_tcp_listener(0).unwrap() {
         server.listen(l)
