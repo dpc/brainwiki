@@ -90,10 +90,18 @@ fn theme_get(req: HttpRequest<State>) -> impl Responder {
         "bootstrap.min.css" => {
             HttpResponse::build(StatusCode::OK)
                 .content_type("text/css; charset=utf-8")
+                .header(
+                    http::header::CACHE_CONTROL,
+                    "public, max-age=600",
+                )
                 .body(BOOTSTRAP_MIN_CSS)
         }
         "custom.css" => HttpResponse::build(StatusCode::OK)
             .content_type("text/css; charset=utf-8")
+            .header(
+                http::header::CACHE_CONTROL,
+                "public, max-age=600",
+            )
             .body(CUSTOM_CSS),
         "favicon.ico" => FAVICON_ICO.into(),
         _ => {
