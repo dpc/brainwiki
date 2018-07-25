@@ -110,7 +110,7 @@ impl State {
             let entry = entry?;
             let path = entry.path();
             if path.is_file()
-                || path.extension().and_then(|e| e.to_str())
+                && path.extension().and_then(|e| e.to_str())
                     == Some("md")
             {
                 self.insert_from_file(&path)?;
@@ -140,6 +140,10 @@ impl State {
                 .or_insert(Default::default())
                 .insert(page_id);
         }
+        debug_assert!(
+            path.extension().and_then(|e| e.to_str())
+                == Some("md")
+        );
         self.pages_by_path.insert(path.into(), page_id);
         self.path_by_id.insert(page_id, path.into());
         self.pages_by_id.insert(page_id, page);
