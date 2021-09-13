@@ -15,6 +15,10 @@
 
 # brainwiki
 
+**NOTE**: 
+I rewrote the whole thing as [tagwiki](https://github.com/dpc/tagwiki)
+which is more complete than this project.
+
 See [wiki](https://github.com/dpc/brainwiki/wiki) for current project status.
 
 BrainWiki is a wiki where everything is addressed using tags. This allows
